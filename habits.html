@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>💖 PINK CITY — ハビットトラッカー</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes shimmer {
+      0%   { background-position: -400% center; }
+      100% { background-position:  400% center; }
+    }
+    @keyframes float1 {
+      0%,100% { transform: translateY(0px) rotate(0deg);    opacity:.6; }
+      50%     { transform: translateY(-30px) rotate(180deg); opacity:1; }
+    }
+    @keyframes float2 {
+      0%,100% { transform: translateY(0px) rotate(45deg);   opacity:.5; }
+      50%     { transform: translateY(-45px) rotate(225deg); opacity:.9; }
+    }
+    @keyframes float3 {
+      0%,100% { transform: translateY(0px) scale(1);    opacity:.4; }
+      50%     { transform: translateY(-20px) scale(1.4); opacity:1; }
+    }
+    @keyframes twinkle {
+      0%,100% { opacity:0; transform:scale(.5); }
+      50%     { opacity:1; transform:scale(1.2); }
+    }
+    @keyframes cell-pop {
+      0%   { transform:scale(1); }
+      45%  { transform:scale(1.3); }
+      100% { transform:scale(1); }
+    }
+
+    /* ===== BODY ===== */
+    html, body {
+      min-height: 100%;
+      font-family: 'Nunito', sans-serif;
+      background: #12000d;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(233,30,140,.18) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(255,45,135,.14) 0%, transparent 50%),
+        radial-gradient(ellipse at 50%  0%, rgba(255,105,180,.10) 0%, transparent 60%);
+      color: #fff;
+      display: flex; flex-direction: column; align-items: center;
+      padding-bottom: 64px;
+      overflow-x: hidden;
+    }
+
+    /* ===== SPARKLES ===== */
+    .sparkle-bg {
+      position: fixed; pointer-events: none; z-index: 0;
+      font-size: 1.4rem; user-select: none;
+    }
+    .sparkle-bg:nth-child(1)  { top:5%;  left:3%;  animation:float1 5.0s ease-in-out infinite 0s; }
+    .sparkle-bg:nth-child(2)  { top:12%; left:90%; animation:float2 6.5s ease-in-out infinite 1s; }
+    .sparkle-bg:nth-child(3)  { top:30%; left:7%;  animation:float3 4.5s ease-in-out infinite .5s; }
+    .sparkle-bg:nth-child(4)  { top:55%; left:95%; animation:float1 7.0s ease-in-out infinite 2s; }
+    .sparkle-bg:nth-child(5)  { top:70%; left:2%;  animation:float2 5.5s ease-in-out infinite 1.5s; }
+    .sparkle-bg:nth-child(6)  { top:85%; left:88%; animation:float3 6.0s ease-in-out infinite .3s; }
+    .sparkle-bg:nth-child(7)  { top:20%; left:48%; animation:twinkle 3.0s ease-in-out infinite .8s; font-size:1.1rem; }
+    .sparkle-bg:nth-child(8)  { top:45%; left:15%; animation:twinkle 4.2s ease-in-out infinite 2.2s; font-size:.9rem; }
+    .sparkle-bg:nth-child(9)  { top:62%; left:75%; animation:twinkle 3.8s ease-in-out infinite 1.1s; font-size:1.2rem; }
+    .sparkle-bg:nth-child(10) { top:90%; left:40%; animation:float1 5.8s ease-in-out infinite .7s; }
+    .sparkle-bg:nth-child(11) { top:3%;  left:55%; animation:twinkle 2.9s ease-in-out infinite 1.9s; font-size:.8rem; }
+    .sparkle-bg:nth-child(12) { top:78%; left:55%; animation:float2 6.2s ease-in-out infinite 3s; }
+
+    /* ===== HEADER ===== */
+    .header {
+      position:relative; z-index:2;
+      width:100%; text-align:center;
+      padding:44px 24px 28px;
+    }
+    .header-eyebrow {
+      font-family:'Outfit',sans-serif; font-size:.8rem; font-weight:700;
+      letter-spacing:.35em; text-transform:uppercase;
+      color:#FF69B4; opacity:.85; margin-bottom:10px;
+    }
+    .header-title {
+      font-family:'Outfit',sans-serif;
+      font-size:clamp(2.4rem,8vw,5rem); font-weight:900; line-height:1.05;
+      background:linear-gradient(90deg,#FF2D87,#FF69B4,#FFD1EC,#E91E8C,#FF2D87,#FF69B4,#FFD1EC,#E91E8C);
+      background-size:300% auto;
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      animation:shimmer 4s linear infinite;
+      filter:drop-shadow(0 0 18px rgba(255,45,135,.6));
+    }
+    .header-sub {
+      margin-top:12px; font-size:.95rem; font-weight:600;
+      color:#FF69B4; letter-spacing:.08em; opacity:.9;
+    }
+
+    /* ===== CONTAINER ===== */
+    .container {
+      position:relative; z-index:2;
+      width:100%; max-width:860px;
+      padding:0 16px;
+    }
+
+    /* ===== STATS ROW ===== */
+    .stats-row {
+      display:flex; gap:12px; margin-bottom:24px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+      padding-bottom:4px;
+    }
+    .stats-row::-webkit-scrollbar { display:none; }
+    .stat-card {
+      flex-shrink:0;
+      background:rgba(255,45,135,.09);
+      border:1px solid rgba(255,45,135,.28);
+      border-radius:16px;
+      padding:14px 18px;
+      min-width:130px;
+      backdrop-filter:blur(10px);
+      box-shadow:0 4px 20px rgba(233,30,140,.12), inset 0 1px 0 rgba(255,182,220,.12);
+    }
+    .stat-emoji  { font-size:1.6rem; margin-bottom:4px; }
+    .stat-name   { font-size:.7rem; font-weight:800; color:#FF69B4; letter-spacing:.06em; margin-bottom:8px; }
+    .stat-streak {
+      font-family:'Outfit',sans-serif; font-size:1.3rem; font-weight:900;
+      color:#FF2D87; margin-bottom:2px;
+    }
+    .stat-pct    { font-size:.75rem; font-weight:700; color:#FFB0D8; }
+
+    /* ===== SECTION TITLE ===== */
+    .section-title {
+      font-family:'Outfit',sans-serif; font-size:.8rem; font-weight:800;
+      letter-spacing:.2em; text-transform:uppercase;
+      color:#FF69B4; opacity:.8; margin-bottom:14px;
+    }
+
+    /* ===== GRID WRAPPER ===== */
+    .grid-scroll {
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:thin;
+      scrollbar-color:rgba(255,45,135,.3) transparent;
+      border-radius:16px;
+      background:rgba(255,20,100,.05);
+      border:1px solid rgba(255,45,135,.18);
+      padding:16px 12px;
+      margin-bottom:24px;
+    }
+    .grid-scroll::-webkit-scrollbar { height:4px; }
+    .grid-scroll::-webkit-scrollbar-track { background:transparent; }
+    .grid-scroll::-webkit-scrollbar-thumb { background:rgba(255,45,135,.3); border-radius:2px; }
+
+    /* ===== DATE HEADER ROW ===== */
+    .grid-table {
+      border-collapse:collapse;
+      min-width:100%;
+    }
+    .grid-table th, .grid-table td {
+      padding:0; border:none; vertical-align:middle;
+    }
+    .date-label-cell {
+      width:22px; text-align:center;
+      font-family:'Outfit',sans-serif; font-size:.58rem; font-weight:800;
+      color:rgba(255,105,180,.55);
+      padding-bottom:6px;
+    }
+    .date-label-cell.today-label { color:#FF69B4; font-weight:900; }
+    .habit-row-label {
+      white-space:nowrap;
+      padding-right:12px;
+    }
+    .habit-row-label-inner {
+      display:flex; align-items:center; gap:6px;
+      font-size:.72rem; font-weight:800; color:#FFB0D8;
+    }
+    .habit-row-label-emoji { font-size:1.1rem; }
+    .grid-cell { padding:2px 1px; text-align:center; }
+    .cell-circle {
+      display:inline-block;
+      width:18px; height:18px; border-radius:50%;
+      background:rgba(255,45,135,.12);
+      transition:transform .2s;
+    }
+    .cell-circle.done {
+      background:#FF2D87;
+      box-shadow:0 0 6px rgba(255,45,135,.5);
+    }
+    .cell-circle.today-ring {
+      box-shadow:0 0 0 2px #fff, 0 0 8px rgba(255,45,135,.3);
+    }
+    .cell-circle.done.today-ring {
+      background:#FF2D87;
+      box-shadow:0 0 0 2px #fff, 0 0 12px rgba(255,45,135,.55);
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align:center; padding:48px 24px;
+      color:#FF69B4; font-family:'Outfit',sans-serif;
+      font-size:1rem; font-weight:700; opacity:.7;
+    }
+    .empty-state-emoji { font-size:3rem; margin-bottom:16px; }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      position:relative; z-index:2; margin-top:20px; padding:16px;
+      text-align:center;
+    }
+    .footer-link {
+      font-family:'Outfit',sans-serif; font-size:.9rem; font-weight:800;
+      letter-spacing:.08em;
+      background:linear-gradient(90deg,#FF2D87,#FFB0D8,#E91E8C,#FF2D87);
+      background-size:300% auto;
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      animation:shimmer 5s linear infinite;
+      text-decoration:none;
+    }
+    .footer-link:hover { opacity:.8; }
+  </style>
+</head>
+<body>
+
+<!-- Sparkles -->
+<span class="sparkle-bg" aria-hidden="true">✨</span>
+<span class="sparkle-bg" aria-hidden="true">💖</span>
+<span class="sparkle-bg" aria-hidden="true">⭐</span>
+<span class="sparkle-bg" aria-hidden="true">🌸</span>
+<span class="sparkle-bg" aria-hidden="true">💫</span>
+<span class="sparkle-bg" aria-hidden="true">✨</span>
+<span class="sparkle-bg" aria-hidden="true">🩷</span>
+<span class="sparkle-bg" aria-hidden="true">⭐</span>
+<span class="sparkle-bg" aria-hidden="true">💖</span>
+<span class="sparkle-bg" aria-hidden="true">🌟</span>
+<span class="sparkle-bg" aria-hidden="true">✨</span>
+<span class="sparkle-bg" aria-hidden="true">💫</span>
+
+<header class="header">
+  <p class="header-eyebrow">✦ PINK CITY ✦</p>
+  <h1 class="header-title">💖 PINK CITY 💖</h1>
+  <p class="header-sub">✨ ハビットトラッカー</p>
+</header>
+
+<div class="container">
+
+  <!-- Stats Row -->
+  <div class="stats-row" id="stats-row" aria-label="習慣の統計"></div>
+
+  <!-- 30-Day Grid -->
+  <p class="section-title">📅 30日間の記録</p>
+  <div class="grid-scroll">
+    <div id="grid-container"></div>
+  </div>
+
+</div>
+
+<footer class="footer">
+  <a class="footer-link" href="https://htmlpreview.github.io/?https://gist.githubusercontent.com/Natsumi723723/f5669bafb936b25a86dade497dad0747/raw/pink-kanban.html">
+    ← 💖 PINK CITY Kanban に戻る
+  </a>
+</footer>
+
+<script>
+/* ============================================================
+   DATA
+============================================================ */
+const HABITS_KEY = 'pinkcity-habits-v1';
+const DAYS = 30;
+
+const PLACEHOLDER_DATA = {
+  habits: [
+    { id: 'h1', name: 'Instagram投稿', emoji: '📸' },
+    { id: 'h2', name: 'TikTok投稿',    emoji: '🎵' },
+    { id: 'h3', name: 'PINK収集メモ',  emoji: '🩷' },
+  ],
+  records: {},
+};
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(HABITS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.habits)) return parsed;
+    }
+  } catch(_) {}
+  return null;
+}
+
+/* ============================================================
+   DATE HELPERS
+============================================================ */
+function makeDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+function getLast30Days() {
+  const days = [];
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    days.push(d);
+  }
+  return days; // index 0 = oldest, last = today
+}
+
+function calcStreak(habitId, records) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let streak = 0;
+  let i = 1;
+  while (true) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const k = makeDateKey(d);
+    if (records[k] && records[k][habitId]) { streak++; i++; }
+    else break;
+  }
+  const todayKey = makeDateKey(today);
+  if (records[todayKey] && records[todayKey][habitId]) streak++;
+  return streak;
+}
+
+function calcMonthPct(habitId, records) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const year  = today.getFullYear();
+  const month = today.getMonth();
+  const daysInMonth = today.getDate(); // days elapsed so far this month
+  let done = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const k = makeDateKey(date);
+    if (records[k] && records[k][habitId]) done++;
+  }
+  return daysInMonth > 0 ? Math.round(done / daysInMonth * 100) : 0;
+}
+
+/* ============================================================
+   RENDER
+============================================================ */
+function render() {
+  const raw = loadData();
+  const isPlaceholder = !raw;
+  const data = raw || PLACEHOLDER_DATA;
+
+  renderStats(data, isPlaceholder);
+  renderGrid(data, isPlaceholder);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderStats(data, isPlaceholder) {
+  const row = document.getElementById('stats-row');
+  row.innerHTML = '';
+
+  if (isPlaceholder || data.habits.length === 0) {
+    row.innerHTML = '<p style="color:rgba(255,105,180,.5);font-size:.8rem;font-weight:700;padding:12px 4px;">データなし — まずはKanbanボードで習慣を記録しよう！</p>';
+    return;
+  }
+
+  data.habits.forEach(habit => {
+    const streak = calcStreak(habit.id, data.records);
+    const pct    = calcMonthPct(habit.id, data.records);
+    const card   = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = `
+      <div class="stat-emoji">${habit.emoji}</div>
+      <div class="stat-name">${escHtml(habit.name)}</div>
+      <div class="stat-streak">🔥${streak}day</div>
+      <div class="stat-pct">今月 ${pct}% 達成</div>`;
+    row.appendChild(card);
+  });
+}
+
+function renderGrid(data, isPlaceholder) {
+  const container = document.getElementById('grid-container');
+  container.innerHTML = '';
+
+  if (data.habits.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-emoji">🌸</div>まだ習慣が登録されていません。<br>Kanbanボードから追加しよう！</div>`;
+    return;
+  }
+
+  const days    = getLast30Days();
+  const todayStr = makeDateKey(new Date());
+
+  const table = document.createElement('table');
+  table.className = 'grid-table';
+  table.setAttribute('role', 'grid');
+
+  // Date header
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  // Habit label column spacer
+  const thLabel = document.createElement('th');
+  thLabel.setAttribute('scope', 'col');
+  headerRow.appendChild(thLabel);
+
+  days.forEach((day, idx) => {
+    const th = document.createElement('th');
+    th.setAttribute('scope', 'col');
+    th.className = 'date-label-cell';
+    const isToday = makeDateKey(day) === todayStr;
+    if (isToday) th.classList.add('today-label');
+    // Show label every 5 days, plus first and last
+    const showLabel = (idx === 0) || (idx === days.length - 1) || ((DAYS - 1 - idx) % 5 === 0);
+    th.textContent = showLabel ? day.getDate() : '';
+    if (isToday) th.textContent = day.getDate(); // always show today
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Body rows
+  const tbody = document.createElement('tbody');
+
+  data.habits.forEach(habit => {
+    const tr = document.createElement('tr');
+
+    // Habit label
+    const tdLabel = document.createElement('td');
+    tdLabel.className = 'habit-row-label';
+    tdLabel.innerHTML = `
+      <div class="habit-row-label-inner">
+        <span class="habit-row-label-emoji">${habit.emoji}</span>
+        <span>${escHtml(habit.name)}</span>
+      </div>`;
+    tr.appendChild(tdLabel);
+
+    days.forEach(day => {
+      const dayKey  = makeDateKey(day);
+      const isToday = dayKey === todayStr;
+      const isDone  = !!(data.records[dayKey] && data.records[dayKey][habit.id]);
+      // Future cells (after today) treated as empty
+      const isFuture = day > new Date();
+
+      const td = document.createElement('td');
+      td.className = 'grid-cell';
+      const circle = document.createElement('span');
+      circle.className = 'cell-circle';
+      if (isDone && !isFuture)  circle.classList.add('done');
+      if (isToday) circle.classList.add('today-ring');
+      if (isFuture) circle.style.opacity = '.3';
+      td.appendChild(circle);
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+
+  if (isPlaceholder) {
+    const notice = document.createElement('p');
+    notice.style.cssText = 'color:rgba(255,105,180,.5);font-size:.75rem;font-weight:700;text-align:center;margin-top:16px;';
+    notice.textContent = 'サンプルデータを表示中。Kanbanボードで記録を開始しよう！';
+    container.appendChild(table);
+    container.appendChild(notice);
+  } else {
+    container.appendChild(table);
+  }
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+render();
+</script>
+</body>
+</html>

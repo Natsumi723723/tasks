@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>💖 PINK CITY — Kanban Board</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes shimmer {
+      0%   { background-position: -400% center; }
+      100% { background-position:  400% center; }
+    }
+    @keyframes float1 {
+      0%,100% { transform: translateY(0px) rotate(0deg);    opacity:.6; }
+      50%     { transform: translateY(-30px) rotate(180deg); opacity:1; }
+    }
+    @keyframes float2 {
+      0%,100% { transform: translateY(0px) rotate(45deg);   opacity:.5; }
+      50%     { transform: translateY(-45px) rotate(225deg); opacity:.9; }
+    }
+    @keyframes float3 {
+      0%,100% { transform: translateY(0px) scale(1);    opacity:.4; }
+      50%     { transform: translateY(-20px) scale(1.4); opacity:1; }
+    }
+    @keyframes twinkle {
+      0%,100% { opacity:0; transform:scale(.5); }
+      50%     { opacity:1; transform:scale(1.2); }
+    }
+    @keyframes badge-pulse {
+      0%,100% { transform:scale(1); }
+      50%     { transform:scale(1.12); }
+    }
+    @keyframes sheet-in {
+      from { transform:translateY(100%); }
+      to   { transform:translateY(0); }
+    }
+    @keyframes card-in {
+      from { opacity:0; transform:translateY(-8px) scale(.97); }
+      to   { opacity:1; transform:translateY(0)    scale(1); }
+    }
+    @keyframes del-confirm {
+      0%,100% { transform:scale(1); }
+      30%     { transform:scale(1.04); }
+    }
+    @keyframes burst-particle {
+      0%   { transform: translate(-50%,-50%) rotate(var(--a)) translateY(0px) scale(1); opacity:1; }
+      100% { transform: translate(-50%,-50%) rotate(var(--a)) translateY(-52px) scale(0); opacity:0; }
+    }
+    @keyframes check-pop {
+      0%   { transform:scale(1); }
+      40%  { transform:scale(1.22); }
+      70%  { transform:scale(.92); }
+      100% { transform:scale(1); }
+    }
+    @keyframes all-done-banner {
+      0%   { opacity:0; transform:translate(-50%,-50%) scale(.7); }
+      18%  { opacity:1; transform:translate(-50%,-50%) scale(1.05); }
+      28%  { transform:translate(-50%,-50%) scale(1); }
+      75%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+      100% { opacity:0; transform:translate(-50%,-50%) scale(.85); }
+    }
+
+    /* ===== BODY ===== */
+    html, body {
+      min-height: 100%;
+      font-family: 'Nunito', sans-serif;
+      background: #12000d;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(233,30,140,.18) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(255,45,135,.14) 0%, transparent 50%),
+        radial-gradient(ellipse at 50%  0%, rgba(255,105,180,.10) 0%, transparent 60%);
+      color: #fff;
+      display: flex; flex-direction: column; align-items: center;
+      padding-bottom: 64px;
+      overflow-x: hidden;
+    }
+
+    /* ===== SPARKLES ===== */
+    .sparkle-bg {
+      position: fixed; pointer-events: none; z-index: 0;
+      font-size: 1.4rem; user-select: none;
+    }
+    .sparkle-bg:nth-child(1)  { top:5%;  left:3%;  animation:float1 5.0s ease-in-out infinite 0s; }
+    .sparkle-bg:nth-child(2)  { top:12%; left:90%; animation:float2 6.5s ease-in-out infinite 1s; }
+    .sparkle-bg:nth-child(3)  { top:30%; left:7%;  animation:float3 4.5s ease-in-out infinite .5s; }
+    .sparkle-bg:nth-child(4)  { top:55%; left:95%; animation:float1 7.0s ease-in-out infinite 2s; }
+    .sparkle-bg:nth-child(5)  { top:70%; left:2%;  animation:float2 5.5s ease-in-out infinite 1.5s; }
+    .sparkle-bg:nth-child(6)  { top:85%; left:88%; animation:float3 6.0s ease-in-out infinite .3s; }
+    .sparkle-bg:nth-child(7)  { top:20%; left:48%; animation:twinkle 3.0s ease-in-out infinite .8s; font-size:1.1rem; }
+    .sparkle-bg:nth-child(8)  { top:45%; left:15%; animation:twinkle 4.2s ease-in-out infinite 2.2s; font-size:.9rem; }
+    .sparkle-bg:nth-child(9)  { top:62%; left:75%; animation:twinkle 3.8s ease-in-out infinite 1.1s; font-size:1.2rem; }
+    .sparkle-bg:nth-child(10) { top:90%; left:40%; animation:float1 5.8s ease-in-out infinite .7s; }
+    .sparkle-bg:nth-child(11) { top:3%;  left:55%; animation:twinkle 2.9s ease-in-out infinite 1.9s; font-size:.8rem; }
+    .sparkle-bg:nth-child(12) { top:78%; left:55%; animation:float2 6.2s ease-in-out infinite 3s; }
+
+    /* ===== HEADER ===== */
+    .header {
+      position:relative; z-index:2;
+      width:100%; text-align:center;
+      padding:44px 24px 28px;
+    }
+    .header-eyebrow {
+      font-family:'Outfit',sans-serif; font-size:.8rem; font-weight:700;
+      letter-spacing:.35em; text-transform:uppercase;
+      color:#FF69B4; opacity:.85; margin-bottom:10px;
+    }
+    .header-title {
+      font-family:'Outfit',sans-serif;
+      font-size:clamp(2.4rem,8vw,5rem); font-weight:900; line-height:1.05;
+      background:linear-gradient(90deg,#FF2D87,#FF69B4,#FFD1EC,#E91E8C,#FF2D87,#FF69B4,#FFD1EC,#E91E8C);
+      background-size:300% auto;
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      animation:shimmer 4s linear infinite;
+      filter:drop-shadow(0 0 18px rgba(255,45,135,.6));
+    }
+    .header-sub {
+      margin-top:12px; font-size:.95rem; font-weight:600;
+      color:#FF69B4; letter-spacing:.08em; opacity:.9;
+    }
+
+    /* ===== BOARD ===== */
+    .board {
+      position:relative; z-index:2;
+      display:flex; gap:16px;
+      align-self:stretch;
+      box-sizing:border-box;
+      padding:0 16px;
+      align-items:flex-start;
+    }
+
+    /* ===== COLUMN ===== */
+    .column {
+      flex:1; min-width:0;
+      background:rgba(255,20,100,.07);
+      border:1px solid rgba(255,45,135,.28);
+      border-radius:20px;
+      padding:16px 12px 20px;
+      backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      box-shadow:
+        0 0 0 1px rgba(255,105,180,.12),
+        0 8px 32px rgba(233,30,140,.15),
+        inset 0 1px 0 rgba(255,182,220,.15);
+      transition:box-shadow .25s, background .25s;
+      min-height:120px;
+      /* PC: 各カラムを独立スクロール */
+      display:flex; flex-direction:column;
+    }
+    .col-cards {
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex: 1;
+      /* スクロールバーを細くてピンクに */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,45,135,.4) transparent;
+      /* スムーズスクロール */
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+      /* 下に余白 */
+      padding-bottom: 4px;
+    }
+    .col-cards::-webkit-scrollbar { width: 4px; }
+    .col-cards::-webkit-scrollbar-track { background: transparent; }
+    .col-cards::-webkit-scrollbar-thumb { background: rgba(255,45,135,.35); border-radius: 2px; }
+    @media (min-width:681px) {
+      .column { max-height: calc(100vh - 210px); }
+    }
+    .column.drag-over {
+      background:rgba(255,45,135,.15);
+      box-shadow:0 0 0 2px rgba(255,45,135,.55), 0 12px 48px rgba(233,30,140,.35), inset 0 1px 0 rgba(255,182,220,.25);
+    }
+
+    /* ===== COL HEADER ===== */
+    .col-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:8px; }
+    .col-title {
+      font-family:'Outfit',sans-serif; font-size:1.15rem; font-weight:900;
+      background:linear-gradient(90deg,#FF2D87,#FFB0D8,#E91E8C,#FF2D87,#FFB0D8,#E91E8C);
+      background-size:300% auto;
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      animation:shimmer 5s linear infinite; white-space:nowrap;
+    }
+    .col-controls { display:flex; align-items:center; gap:6px; }
+    .col-badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,#FF2D87,#E91E8C);
+      color:#fff; font-family:'Outfit',sans-serif;
+      font-size:.75rem; font-weight:800;
+      min-width:26px; height:22px; padding:0 7px; border-radius:999px;
+      box-shadow:0 2px 10px rgba(255,45,135,.55);
+      animation:badge-pulse 2s ease-in-out infinite;
+    }
+    .add-btn {
+      width:28px; height:28px;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(255,45,135,.18); border:1.5px solid rgba(255,45,135,.4);
+      border-radius:50%; color:#FF2D87; font-size:1.1rem; font-weight:900;
+      cursor:pointer; line-height:1;
+      transition:background .18s, transform .18s;
+      -webkit-tap-highlight-color:transparent; user-select:none;
+    }
+    .add-btn:hover, .add-btn:active { background:rgba(255,45,135,.35); transform:scale(1.15); }
+
+    /* ===== CARD ===== */
+    .card {
+      background:linear-gradient(135deg,rgba(255,255,255,.96) 0%,rgba(255,220,240,.92) 100%);
+      border-left:4px solid #FF2D87;
+      border-radius:12px;
+      padding:12px 14px 12px 13px;
+      margin-bottom:9px;
+      color:#3d0025; font-size:.875rem; font-weight:700; line-height:1.4;
+      box-shadow:0 2px 10px rgba(233,30,140,.15);
+      cursor:pointer;
+      transition:transform .18s, box-shadow .18s, opacity .18s;
+      position:relative;
+      display:flex; align-items:center; gap:8px;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:pan-y;  /* 縦スクロールはブラウザに任せる */
+      animation:card-in .25s ease-out;
+      user-select:none;
+    }
+    .card:last-child { margin-bottom:0; }
+    .card:hover {
+      transform:scale(1.022) translateY(-2px);
+      box-shadow:0 6px 24px rgba(233,30,140,.30), 0 0 0 2px rgba(255,45,135,.35);
+    }
+    .card:active { transform:scale(.97); }
+    .card.dragging { opacity:.4; transform:scale(.97); cursor:grabbing; box-shadow:none; }
+    .card-prefix { flex-shrink:0; font-size:1.05rem; }
+    .card-text   { flex:1; }
+    /* subtle tap indicator */
+    .card-menu {
+      flex-shrink:0; font-size:.85rem; color:rgba(180,0,90,.35);
+      line-height:1; letter-spacing:-.05em;
+    }
+
+    /* ===== SWIPE HINTS ===== */
+    .swipe-hint {
+      position:absolute; inset:0; border-radius:11px;
+      display:flex; align-items:center;
+      font-family:'Outfit',sans-serif; font-size:.82rem; font-weight:900;
+      opacity:0; pointer-events:none; gap:5px;
+      transition:opacity .08s;
+    }
+    .swipe-hint--right {
+      background:linear-gradient(90deg,transparent 30%,rgba(30,210,100,.18) 100%);
+      color:#00c853; justify-content:flex-end; padding-right:14px;
+    }
+    .swipe-hint--left {
+      background:linear-gradient(90deg,rgba(255,90,30,.18) 0%,transparent 70%);
+      color:#ff784e; justify-content:flex-start; padding-left:14px;
+    }
+    .column--done .card {
+      border-left-color:#c0007a;
+      background:linear-gradient(135deg,rgba(255,255,255,.88) 0%,rgba(255,200,230,.82) 100%);
+      flex-wrap:wrap;
+    }
+    .column--done .card-text {
+      text-decoration:line-through;
+      text-decoration-color:rgba(233,30,140,.4);
+      opacity:.7;
+    }
+    .card-date {
+      width:100%; margin-top:5px;
+      font-size:.7rem; font-weight:800;
+      color:#c0007a; opacity:.7;
+      letter-spacing:.04em;
+      padding-left:1.6rem; /* align under text, past prefix */
+    }
+
+    /* ===== DROP PLACEHOLDER ===== */
+    .drop-placeholder {
+      height:48px; border:2px dashed rgba(255,45,135,.45);
+      border-radius:10px; margin-bottom:9px;
+      background:rgba(255,45,135,.06);
+    }
+
+    /* ===== GHOST ===== */
+    #ghost {
+      position:fixed; z-index:9999; pointer-events:none;
+      opacity:.88; transform:rotate(3deg) scale(1.04);
+      min-width:180px; max-width:280px;
+      filter:drop-shadow(0 8px 24px rgba(255,45,135,.55));
+    }
+
+    /* ===== OVERLAY (shared) ===== */
+    .overlay {
+      display:none; position:fixed; inset:0; z-index:100;
+      background:rgba(10,0,8,.6);
+      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      align-items:flex-end; justify-content:center;
+    }
+    .overlay.open { display:flex; }
+
+    /* ===== ACTION SHEET ===== */
+    .sheet {
+      width:100%; max-width:520px;
+      background:linear-gradient(160deg,#1e0015,#2d0022);
+      border:1px solid rgba(255,45,135,.3);
+      border-radius:24px 24px 0 0;
+      padding:0 0 max(env(safe-area-inset-bottom),20px);
+      animation:sheet-in .28s cubic-bezier(.32,0,.15,1);
+      box-shadow:0 -8px 48px rgba(233,30,140,.3);
+      overflow:hidden;
+    }
+    .sheet-handle {
+      width:40px; height:4px; background:rgba(255,105,180,.35);
+      border-radius:2px; margin:14px auto 0;
+    }
+    /* card preview in sheet — 編集可能 */
+    .sheet-preview {
+      display:block;
+      width:calc(100% - 40px);
+      margin:14px 20px 4px;
+      background:rgba(255,45,135,.08);
+      border:1.5px solid rgba(255,45,135,.25);
+      border-radius:12px;
+      padding:10px 14px;
+      font-family:'Nunito',sans-serif;
+      font-size:.9rem; font-weight:700; color:#FFB0D8;
+      line-height:1.5;
+      resize:none; outline:none;
+      transition:border-color .18s, background .18s;
+    }
+    .sheet-preview:focus {
+      border-color:rgba(255,45,135,.65);
+      background:rgba(255,45,135,.14);
+      color:#fff;
+    }
+    /* action rows */
+    .sheet-actions { padding:8px 16px 0; display:flex; flex-direction:column; gap:8px; }
+    .sheet-action {
+      width:100%; padding:15px 18px;
+      border:none; border-radius:14px;
+      font-family:'Outfit',sans-serif; font-size:1rem; font-weight:800;
+      cursor:pointer; text-align:left;
+      display:flex; align-items:center; gap:10px;
+      transition:transform .15s, background .15s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .sheet-action:active { transform:scale(.97); }
+    .sheet-action--move {
+      background:rgba(255,45,135,.14);
+      border:1.5px solid rgba(255,45,135,.28);
+      color:#fff;
+    }
+    .sheet-action--move:hover { background:rgba(255,45,135,.22); }
+    .sheet-action--done-btn {
+      background:linear-gradient(135deg,#FF2D87,#E91E8C);
+      color:#fff;
+      box-shadow:0 4px 18px rgba(255,45,135,.45);
+    }
+    .sheet-action--done-btn:hover { box-shadow:0 6px 26px rgba(255,45,135,.65); }
+    .sheet-action--del {
+      background:rgba(180,0,60,.12);
+      border:1.5px solid rgba(200,0,80,.25);
+      color:#ff6b9d;
+    }
+    .sheet-action--del:hover { background:rgba(180,0,60,.22); }
+    .sheet-action--del.confirming {
+      background:rgba(200,0,60,.3);
+      border-color:rgba(255,30,80,.6);
+      color:#fff;
+      animation:del-confirm .3s ease;
+    }
+    .sheet-divider {
+      height:1px; background:rgba(255,45,135,.15);
+      margin:4px 16px;
+    }
+    .sheet-action--cancel {
+      background:transparent; border:none;
+      color:rgba(255,105,180,.6);
+      font-size:.9rem; font-weight:700;
+      cursor:pointer; width:100%; padding:12px;
+      text-align:center; font-family:'Outfit',sans-serif;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    /* ===== ADD MODAL ===== */
+    .modal {
+      width:100%; max-width:520px;
+      background:linear-gradient(160deg,#1e0015,#2d0022);
+      border:1px solid rgba(255,45,135,.35);
+      border-radius:24px 24px 0 0;
+      padding:28px 24px max(env(safe-area-inset-bottom,20px),20px);
+      animation:sheet-in .28s cubic-bezier(.32,0,.15,1);
+      box-shadow:0 -8px 48px rgba(233,30,140,.3);
+    }
+    .modal-handle { width:40px; height:4px; background:rgba(255,105,180,.4); border-radius:2px; margin:0 auto 20px; }
+    .modal-title {
+      font-family:'Outfit',sans-serif; font-size:1.1rem; font-weight:900;
+      color:#FF69B4; margin-bottom:14px; text-align:center; letter-spacing:.04em;
+    }
+    .modal-input {
+      width:100%; background:rgba(255,45,135,.1);
+      border:1.5px solid rgba(255,45,135,.35); border-radius:12px;
+      padding:13px 16px; color:#fff;
+      font-family:'Nunito',sans-serif; font-size:1rem; font-weight:700;
+      outline:none; transition:border-color .18s, background .18s;
+      -webkit-appearance:none;
+    }
+    .modal-input::placeholder { color:rgba(255,150,200,.5); }
+    .modal-input:focus { border-color:#FF2D87; background:rgba(255,45,135,.16); }
+    .modal-actions { display:flex; gap:10px; margin-top:14px; }
+    .modal-btn {
+      flex:1; padding:13px; border:none; border-radius:12px;
+      font-family:'Outfit',sans-serif; font-size:1rem; font-weight:800;
+      cursor:pointer; transition:transform .15s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .modal-btn:active { transform:scale(.96); }
+    .modal-btn--cancel { background:rgba(255,45,135,.15); color:#FF69B4; border:1.5px solid rgba(255,45,135,.3); }
+    .modal-btn--add    { background:linear-gradient(135deg,#FF2D87,#E91E8C); color:#fff; box-shadow:0 4px 20px rgba(255,45,135,.5); }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      position:relative; z-index:2; margin-top:28px; padding:16px;
+      text-align:center; font-family:'Outfit',sans-serif;
+      font-size:1rem; font-weight:800; letter-spacing:.12em;
+      background:linear-gradient(90deg,#FF2D87,#FFB0D8,#E91E8C,#FF2D87);
+      background-size:300% auto;
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      animation:shimmer 5s linear infinite;
+    }
+
+    /* ===== HABIT STRIP ===== */
+    .habit-strip {
+      position:relative; z-index:2;
+      align-self:stretch;
+      box-sizing:border-box;
+      padding:0 16px 16px;
+      display:flex; align-items:center; gap:10px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    .habit-strip::-webkit-scrollbar { display:none; }
+    .habit-strip-label {
+      font-family:'Outfit',sans-serif; font-size:.72rem; font-weight:800;
+      letter-spacing:.18em; text-transform:uppercase;
+      color:#FF69B4; opacity:.8; white-space:nowrap;
+      flex-shrink:0;
+    }
+    .habit-history-link {
+      flex-shrink:0;
+      display:inline-flex; align-items:center; gap:4px;
+      font-family:'Outfit',sans-serif; font-size:.68rem; font-weight:800;
+      color:#FF69B4; text-decoration:none;
+      background:rgba(255,45,135,.12);
+      border:1.5px solid rgba(255,45,135,.3);
+      border-radius:999px; padding:4px 10px;
+      white-space:nowrap;
+      transition:background .18s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .habit-history-link:hover, .habit-history-link:active {
+      background:rgba(255,45,135,.25);
+    }
+    .habit-card {
+      position:relative;
+      flex-shrink:0;
+      width:76px; min-height:90px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:4px;
+      background:rgba(255,45,135,.07);
+      border:1.5px solid rgba(255,45,135,.32);
+      border-radius:16px;
+      padding:8px 4px 10px;
+      cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+      user-select:none;
+      transition:border-color .2s, background .2s, box-shadow .2s;
+    }
+    .habit-card:active { transform:scale(.93); }
+    .habit-card.checked {
+      background:linear-gradient(135deg,rgba(255,45,135,.22),rgba(233,30,140,.18));
+      border-color:rgba(255,105,180,.7);
+      box-shadow:0 0 16px rgba(255,45,135,.4), inset 0 1px 0 rgba(255,182,220,.2);
+    }
+    .habit-card.pop { animation:check-pop .35s cubic-bezier(.34,1.56,.64,1); }
+    .habit-emoji { font-size:1.6rem; line-height:1; }
+    .habit-name {
+      font-family:'Nunito',sans-serif; font-size:.6rem; font-weight:800;
+      color:#FFB0D8; text-align:center; line-height:1.2;
+      width:100%; padding:0 2px;
+    }
+    .habit-streak {
+      font-family:'Outfit',sans-serif; font-size:.6rem; font-weight:900;
+      color:#FF2D87;
+    }
+    .habit-check {
+      position:absolute; top:4px; right:5px;
+      font-size:.75rem; opacity:0;
+      transition:opacity .18s;
+    }
+    .habit-card.checked .habit-check { opacity:1; }
+    .habit-add-btn {
+      flex-shrink:0;
+      width:52px; height:52px;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(255,45,135,.1);
+      border:1.5px dashed rgba(255,45,135,.38);
+      border-radius:50%;
+      color:#FF2D87; font-size:1.4rem;
+      cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+      transition:background .18s, transform .18s;
+    }
+    .habit-add-btn:hover, .habit-add-btn:active {
+      background:rgba(255,45,135,.22);
+      transform:scale(1.1);
+    }
+    /* Burst particle */
+    .burst-particle {
+      position:fixed; pointer-events:none; z-index:9998;
+      font-size:.85rem;
+      animation:burst-particle .65s cubic-bezier(.4,0,1,1) forwards;
+    }
+    /* All-done banner */
+    .all-done-banner {
+      display:none;
+      position:fixed; z-index:9999;
+      top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      background:linear-gradient(135deg,#FF2D87,#E91E8C,#FF69B4);
+      color:#fff;
+      font-family:'Outfit',sans-serif; font-size:1.15rem; font-weight:900;
+      padding:18px 32px;
+      border-radius:20px;
+      box-shadow:0 8px 48px rgba(255,45,135,.65), 0 0 0 2px rgba(255,182,220,.4);
+      text-align:center;
+      white-space:nowrap;
+      pointer-events:none;
+    }
+    .all-done-banner.show {
+      display:block;
+      animation:all-done-banner 2.2s ease forwards;
+    }
+    /* Habit add overlay */
+    #habit-add-overlay .modal { padding-bottom: max(env(safe-area-inset-bottom),20px); }
+    .emoji-picker-grid {
+      display:grid; grid-template-columns:repeat(7,1fr); gap:6px;
+      margin-bottom:14px;
+    }
+    .emoji-picker-btn {
+      font-size:1.3rem; background:rgba(255,45,135,.1);
+      border:1.5px solid transparent; border-radius:10px;
+      padding:6px; cursor:pointer; text-align:center;
+      transition:border-color .15s, background .15s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .emoji-picker-btn.selected {
+      border-color:#FF2D87;
+      background:rgba(255,45,135,.25);
+      box-shadow:0 0 8px rgba(255,45,135,.4);
+    }
+
+    /* ===== FILTER BAR ===== */
+    .filter-bar {
+      position:relative; z-index:2;
+      align-self:stretch;          /* body の flex cross-axis いっぱいに伸ばす */
+      box-sizing:border-box;
+      padding:0 16px 14px;
+      display:flex; gap:6px;
+    }
+    .filter-btn {
+      flex:1; min-width:0;
+      display:flex; align-items:center; justify-content:center; gap:4px;
+      padding:9px 6px;
+      border:none; border-radius:999px;
+      font-family:'Outfit',sans-serif; font-size:.75rem; font-weight:800;
+      cursor:pointer; letter-spacing:.02em;
+      transition:transform .15s, background .2s, box-shadow .2s;
+      -webkit-tap-highlight-color:transparent;
+      white-space:nowrap; overflow:hidden;
+    }
+    .filter-btn:active { transform:scale(.94); }
+    .filter-btn--all {
+      background:rgba(255,45,135,.12);
+      border:1.5px solid rgba(255,45,135,.3);
+      color:#FFB0D8;
+    }
+    .filter-btn--pinkcity {
+      background:rgba(255,45,135,.12);
+      border:1.5px solid rgba(255,45,135,.3);
+      color:#FFB0D8;
+    }
+    .filter-btn--private {
+      background:rgba(139,92,246,.12);
+      border:1.5px solid rgba(139,92,246,.3);
+      color:#c4b5fd;
+    }
+    .filter-btn.active.filter-btn--all {
+      background:linear-gradient(135deg,rgba(255,45,135,.35),rgba(233,30,140,.3));
+      border-color:rgba(255,45,135,.7);
+      color:#fff;
+      box-shadow:0 0 16px rgba(255,45,135,.4);
+    }
+    .filter-btn.active.filter-btn--pinkcity {
+      background:linear-gradient(135deg,#FF2D87,#E91E8C);
+      border-color:#FF2D87;
+      color:#fff;
+      box-shadow:0 4px 20px rgba(255,45,135,.55);
+    }
+    .filter-btn.active.filter-btn--private {
+      background:linear-gradient(135deg,#7c3aed,#6d28d9);
+      border-color:#8b5cf6;
+      color:#fff;
+      box-shadow:0 4px 20px rgba(139,92,246,.55);
+    }
+    .filter-count {
+      display:inline-flex; align-items:center; justify-content:center;
+      background:rgba(255,255,255,.22);
+      border-radius:999px; min-width:16px; height:16px;
+      font-size:.62rem; font-weight:900; padding:0 4px;
+      flex-shrink:0;
+    }
+
+    /* ===== PRIVATE CARD STYLE ===== */
+    .card--private {
+      border-left-color:#8b5cf6;
+      background:linear-gradient(135deg,rgba(255,255,255,.96) 0%,rgba(237,233,254,.92) 100%);
+    }
+    .card--private:hover {
+      box-shadow:0 6px 24px rgba(139,92,246,.28), 0 0 0 2px rgba(139,92,246,.3);
+    }
+    .column--done .card--private {
+      border-left-color:#6d28d9;
+      background:linear-gradient(135deg,rgba(255,255,255,.88) 0%,rgba(221,214,254,.82) 100%);
+    }
+
+    /* ===== QUICK COMPLETE BUTTON ===== */
+    .card-done-btn {
+      flex-shrink:0;
+      width:34px; height:34px;
+      display:flex; align-items:center; justify-content:center;
+      background:transparent;
+      border:1.5px solid rgba(255,45,135,.35);
+      border-radius:50%;
+      font-size:1.15rem; line-height:1;
+      cursor:pointer;
+      color:rgba(255,45,135,.5);
+      /* ぷよんアニメ用 */
+      transition:
+        transform .25s cubic-bezier(.34,1.56,.64,1),
+        background .18s,
+        border-color .18s,
+        box-shadow .18s,
+        color .18s;
+      -webkit-tap-highlight-color:transparent;
+      user-select:none;
+    }
+    /* タップ後：塗りつぶし＋グロー（コントラスト最大） */
+    .card-done-btn.tapped {
+      background:linear-gradient(135deg,#FF2D87,#E91E8C);
+      border-color:#FF2D87;
+      color:#fff;
+      box-shadow:0 0 20px rgba(255,45,135,.75), 0 0 6px rgba(255,45,135,.5);
+      transform:scale(1.28);
+    }
+
+    /* ===== CATEGORY BADGE (in ALL view) ===== */
+    .cat-badge {
+      flex-shrink:0;
+      font-size:.62rem; font-weight:900;
+      padding:2px 6px; border-radius:999px;
+      letter-spacing:.03em; line-height:1.4;
+    }
+    .cat-badge--pinkcity {
+      background:rgba(255,45,135,.15);
+      color:#FF2D87;
+      border:1px solid rgba(255,45,135,.3);
+    }
+    .cat-badge--private {
+      background:rgba(139,92,246,.15);
+      color:#8b5cf6;
+      border:1px solid rgba(139,92,246,.3);
+    }
+
+    /* ===== CATEGORY PICKER (in add modal) ===== */
+    .cat-picker {
+      display:flex; gap:8px; margin-bottom:14px;
+    }
+    .cat-pick-btn {
+      flex:1; padding:9px 8px;
+      border:1.5px solid transparent; border-radius:12px;
+      font-family:'Outfit',sans-serif; font-size:.78rem; font-weight:800;
+      cursor:pointer; text-align:center;
+      transition:border-color .15s, background .15s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .cat-pick-btn--pinkcity {
+      background:rgba(255,45,135,.1); color:#FF69B4; border-color:rgba(255,45,135,.25);
+    }
+    .cat-pick-btn--private {
+      background:rgba(139,92,246,.1); color:#a78bfa; border-color:rgba(139,92,246,.25);
+    }
+    .cat-pick-btn.selected.cat-pick-btn--pinkcity {
+      background:rgba(255,45,135,.25); border-color:#FF2D87; color:#fff;
+    }
+    .cat-pick-btn.selected.cat-pick-btn--private {
+      background:rgba(139,92,246,.25); border-color:#8b5cf6; color:#fff;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width:680px) {
+      .board {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        grid-template-areas:"todo done";
+        padding:0 12px;
+        gap:10px;
+      }
+      .column--todo  { grid-area:todo; }
+      .column--done  { grid-area:done; }
+      /* inprog はボードから外してストリップとして表示 */
+      .column--inprog { display:none; }
+    }
+
+    /* ===== ON HOLD STRIP (モバイル専用) ===== */
+    .onhold-strip {
+      display:none; /* JSで表示切り替え */
+      align-self:stretch;
+      box-sizing:border-box;
+      padding:0 12px 10px;
+      position:relative; z-index:2;
+    }
+    @media (max-width:680px) {
+      .onhold-strip { display:block; }
+    }
+    .onhold-toggle {
+      width:100%;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 16px;
+      background:rgba(255,45,135,.08);
+      border:1.5px solid rgba(255,45,135,.25);
+      border-radius:14px;
+      color:#FF69B4;
+      font-family:'Outfit',sans-serif; font-size:.88rem; font-weight:800;
+      cursor:pointer; letter-spacing:.04em;
+      -webkit-tap-highlight-color:transparent;
+      transition:background .18s, border-color .18s;
+    }
+    .onhold-toggle:active { background:rgba(255,45,135,.18); }
+    .onhold-toggle-left { display:flex; align-items:center; gap:7px; }
+    .onhold-count-badge {
+      background:rgba(255,45,135,.25); color:#FF2D87;
+      border-radius:999px; padding:1px 8px;
+      font-size:.72rem; font-weight:900;
+    }
+    .onhold-arrow {
+      font-size:.8rem; opacity:.7;
+      transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .onhold-strip.open .onhold-arrow { transform:rotate(180deg); }
+    .onhold-body {
+      overflow:hidden;
+      max-height:0;
+      transition:max-height .3s cubic-bezier(.4,0,.2,1);
+    }
+    .onhold-strip.open .onhold-body { max-height:600px; }
+    .onhold-inner {
+      padding-top:10px;
+    }
+
+    /* ===== SYNC STATUS ===== */
+    .sync-pill {
+      position:fixed; bottom:20px; right:16px; z-index:9990;
+      font-family:'Outfit',sans-serif; font-size:.72rem; font-weight:800;
+      padding:6px 13px; border-radius:999px;
+      backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+      pointer-events:none; transition:opacity .4s;
+      display:flex; align-items:center; gap:5px;
+    }
+    .sync-pill.saving { background:rgba(255,45,135,.22); color:#FF69B4; border:1px solid rgba(255,45,135,.38); opacity:1; }
+    .sync-pill.ok     { background:rgba(0,210,100,.15);  color:#4ade80;  border:1px solid rgba(0,200,100,.3); animation:sync-fade 2s ease 1.2s forwards; }
+    .sync-pill.error  { background:rgba(255,60,60,.16);  color:#ff8a8a;  border:1px solid rgba(255,60,60,.3);  opacity:1; }
+    .sync-pill.hidden { opacity:0; }
+    @keyframes sync-fade { to { opacity:0; } }
+    .sync-spin { display:inline-block; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ===== TOKEN SETUP OVERLAY ===== */
+    .setup-box {
+      width:100%; max-width:520px;
+      background:linear-gradient(160deg,#1e0015,#2d0022);
+      border:1px solid rgba(255,45,135,.4);
+      border-radius:24px 24px 0 0;
+      padding:32px 24px max(env(safe-area-inset-bottom),28px);
+      animation:sheet-in .28s cubic-bezier(.32,0,.15,1);
+      box-shadow:0 -8px 48px rgba(233,30,140,.3);
+    }
+    .setup-icon { font-size:2.4rem; text-align:center; margin-bottom:10px; }
+    .setup-title {
+      font-family:'Outfit',sans-serif; font-size:1.1rem; font-weight:900;
+      color:#FF69B4; text-align:center; margin-bottom:8px;
+    }
+    .setup-desc {
+      color:#FFB0D8; font-size:.82rem; font-weight:600;
+      text-align:center; line-height:1.6; margin-bottom:18px;
+      opacity:.85;
+    }
+    .setup-link {
+      display:block; text-align:center; margin-bottom:14px;
+      color:#FF69B4; font-family:'Outfit',sans-serif; font-size:.78rem; font-weight:800;
+      text-decoration:none; letter-spacing:.04em;
+    }
+    .setup-link:hover { text-decoration:underline; }
+    .setup-steps {
+      background:rgba(255,45,135,.07); border:1px solid rgba(255,45,135,.2);
+      border-radius:12px; padding:12px 14px; margin-bottom:16px;
+      font-size:.76rem; color:#FFB0D8; line-height:1.8;
+    }
+    .setup-steps b { color:#FF69B4; }
+  </style>
+</head>
+<body>
+
+<!-- Sparkles -->
+<span class="sparkle-bg" aria-hidden="true">✨</span>
+<span class="sparkle-bg" aria-hidden="true">💖</span>
+<span class="sparkle-bg" aria-hidden="true">⭐</span>
+<span class="sparkle-bg" aria-hidden="true">🌸</span>
+<span class="sparkle-bg" aria-hidden="true">💫</span>
+<span class="sparkle-bg" aria-hidden="true">✨</span>
+<span class="sparkle-bg" aria-hidden="true">🩷</span>
+<span class="sparkle-bg" aria-hidden="true">⭐</span>
+<span class="sparkle-bg" aria-hidden="true">💖</span>
+<span class="sparkle-bg" aria-hidden="true">🌟</span>
+<span class="sparkle-bg" aria-hidden="true">✨</span>
+<span class="sparkle-bg" aria-hidden="true">💫</span>
+
+<header class="header">
+  <p class="header-eyebrow">✦ PROJECT MANAGEMENT ✦</p>
+  <h1 class="header-title">💖 PINK CITY 💖</h1>
+</header>
+
+<!-- Filter Bar -->
+<div class="filter-bar" id="filter-bar" role="tablist" aria-label="フィルター">
+  <button class="filter-btn filter-btn--all active" data-filter="all" role="tab" aria-selected="true">
+    🌐 すべて <span class="filter-count" id="fc-all">0</span>
+  </button>
+  <button class="filter-btn filter-btn--pinkcity" data-filter="pinkcity" role="tab" aria-selected="false">
+    💖 PINK CITY <span class="filter-count" id="fc-pinkcity">0</span>
+  </button>
+  <button class="filter-btn filter-btn--private" data-filter="private" role="tab" aria-selected="false">
+    🔒 プライベート <span class="filter-count" id="fc-private">0</span>
+  </button>
+</div>
+
+<!-- Habit Tracking Strip -->
+<div class="habit-strip" id="habit-strip" role="region" aria-label="ハビットトラッカー">
+  <span class="habit-strip-label">習慣</span>
+  <!-- Cards injected by JS -->
+  <button class="habit-add-btn" id="habit-add-open" aria-label="習慣を追加">＋</button>
+  <a class="habit-history-link"
+     href="https://htmlpreview.github.io/?https://gist.githubusercontent.com/Natsumi723723/f5669bafb936b25a86dade497dad0747/raw/pink-habits.html"
+     target="_blank" rel="noopener" aria-label="履歴を見る">
+    📅 履歴
+  </a>
+</div>
+
+<!-- ON HOLD strip (モバイル：折りたたみ) -->
+<div class="onhold-strip" id="onhold-strip">
+  <button class="onhold-toggle" id="onhold-toggle" aria-expanded="false">
+    <span class="onhold-toggle-left">
+      <span>⏳ ON HOLD</span>
+      <span class="onhold-count-badge" id="onhold-badge">0</span>
+    </span>
+    <span class="onhold-arrow">▼</span>
+  </button>
+  <div class="onhold-body" id="onhold-body">
+    <div class="onhold-inner" id="onhold-inner"></div>
+  </div>
+</div>
+
+<main class="board" role="main">
+  <section class="column column--todo"   id="col-todo"   aria-label="UP NEXT"></section>
+  <section class="column column--inprog" id="col-inprog" aria-label="ON HOLD"></section>
+  <section class="column column--done"   id="col-done"   aria-label="DONE"></section>
+</main>
+
+<footer class="footer">💖 PINK CITY PROJECT 💖</footer>
+
+<div id="ghost" style="display:none"></div>
+
+<!-- Action Sheet -->
+<div class="overlay" id="action-overlay">
+  <div class="sheet" id="action-sheet">
+    <div class="sheet-handle"></div>
+    <textarea class="sheet-preview" id="sheet-preview" rows="2" spellcheck="false"></textarea>
+    <div class="sheet-actions" id="sheet-actions"></div>
+    <div class="sheet-divider"></div>
+    <button class="sheet-action--cancel" id="sheet-cancel">キャンセル</button>
+  </div>
+</div>
+
+<!-- Habit Add Overlay -->
+<div class="overlay" id="habit-add-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <p class="modal-title">✨ 習慣を追加</p>
+    <div class="emoji-picker-grid" id="emoji-picker-grid">
+      <!-- Emojis injected by JS -->
+    </div>
+    <input class="modal-input" id="habit-name-input" type="text" placeholder="習慣の名前…" maxlength="12" enterkeyhint="done" />
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn--cancel" id="habit-add-cancel">キャンセル</button>
+      <button class="modal-btn modal-btn--add"    id="habit-add-confirm">追加 💖</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div class="overlay" id="add-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <p class="modal-title" id="modal-title">✨ タスクを追加</p>
+    <div class="cat-picker" id="cat-picker">
+      <button class="cat-pick-btn cat-pick-btn--pinkcity selected" data-cat="pinkcity">💖 PINK CITY</button>
+      <button class="cat-pick-btn cat-pick-btn--private"           data-cat="private">🔒 プライベート</button>
+    </div>
+    <input class="modal-input" id="modal-input" type="text" placeholder="タスク内容を入力…" maxlength="80" enterkeyhint="done" />
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn--cancel" id="modal-cancel">キャンセル</button>
+      <button class="modal-btn modal-btn--add"    id="modal-confirm">追加 💖</button>
+    </div>
+  </div>
+</div>
+
+<!-- All-Done Banner -->
+<div class="all-done-banner" id="all-done-banner">✨ ALL DONE TODAY 💖</div>
+
+<!-- Sync Status Pill -->
+<div class="sync-pill hidden" id="sync-pill"></div>
+
+<!-- Token Setup Overlay (shown on first visit) -->
+<div class="overlay" id="token-setup-overlay">
+  <div class="setup-box">
+    <div class="setup-icon">🔑</div>
+    <p class="setup-title">どこからでも同期するために<br>GitHubトークンを設定</p>
+    <p class="setup-desc">スマホ・PC・外出先どこで更新しても<br>リアルタイムで同じデータが見れるよ💖</p>
+    <div class="setup-steps">
+      <b>①</b> 下のリンクをタップ（新しいタブで開く）<br>
+      <b>②</b>「Generate token」ボタンを押す<br>
+      <b>③</b> 表示されたトークン（ghp_...）をコピー<br>
+      <b>④</b> 下に貼り付けて「保存」
+    </div>
+    <a class="setup-link" href="https://github.com/settings/tokens/new?scopes=gist&description=PINK+CITY+Kanban" target="_blank" rel="noopener">
+      ✦ GitHubでトークンを作成する →
+    </a>
+    <input class="modal-input" id="token-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxx" autocomplete="off" />
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="modal-btn modal-btn--add" id="token-save" style="flex:1">保存して接続 💖</button>
+    </div>
+    <p style="margin-top:12px;text-align:center;font-size:.7rem;color:rgba(255,150,200,.45)">
+      トークンはこのデバイスのみに保存されます
+    </p>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG
+============================================================ */
+const GIST_ID     = 'f5669bafb936b25a86dade497dad0747';
+const TASKS_FILE  = 'tasks.json';
+const HABITS_FILE = 'habits.json';
+const TOKEN_KEY   = 'pinkcity-gh-token';
+const CACHE_KEY   = 'pinkcity-kanban-v8';
+
+const PREFIXES  = ['✦','🌸','💎','✨','⭐','💅','🔥','💌','💻','📖','🩷','💖'];
+
+const COL_ORDER = ['todo','inprog','done'];
+const COL_META  = {
+  todo:   { label:'💅 UP NEXT',  next:'inprog', prev:null },
+  inprog: { label:'⏳ ON HOLD',  next:'done',   prev:'todo' },
+  done:   { label:'DONE ✨',     next:null,     prev:'inprog' },
+};
+const COL_LABEL = { todo:'UP NEXT', inprog:'ON HOLD', done:'DONE' };
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+const DEFAULT_DATA = {
+  todo: [
+    { id:uid(), text:'開封TikTok動画を撮影',              prefix:'🎬' },
+    { id:uid(), text:'TikTok動画を投稿',                  prefix:'📤' },
+    { id:uid(), text:'YouTube商品紹介動画を編集',         prefix:'📹' },
+    { id:uid(), text:'YouTube動画を公開',                 prefix:'🎞️' },
+    { id:uid(), text:'PINK図鑑カテゴリーを設計',          prefix:'📖' },
+    { id:uid(), text:'PINK MALLの構想をドキュメント化',   prefix:'🛍️' },
+    { id:uid(), text:'3DプリンターPINKプロダクトを試作',  prefix:'🖨️' },
+    { id:uid(), text:'ロゴデザインを確定',                prefix:'✦'  },
+    { id:uid(), text:'コミュニティガイドラインを作成',    prefix:'💎' },
+    { id:uid(), text:'スポンサー候補をリストアップ',      prefix:'✨' },
+  ],
+  inprog: [
+    { id:uid(), text:'SHEINグッズを受け取る',             prefix:'🩷' },
+    { id:uid(), text:'プロトタイプサイトを更新',          prefix:'🌐' },
+    { id:uid(), text:'PINKハンティング第一弾を物語化',    prefix:'🗺️' },
+    { id:uid(), text:'SNSアカウントを整備',               prefix:'📱' },
+  ],
+  done: [
+    { id:uid(), text:'プロジェクト名を「PINK CITY」に決定', prefix:'🏆' },
+    { id:uid(), text:'コアメンバーを確定',                 prefix:'👑' },
+    { id:uid(), text:'キックオフミーティング',             prefix:'🎉' },
+    { id:uid(), text:'SHEINでPINKグッズ100個をオーダー',  prefix:'💳' },
+    { id:uid(), text:'プロトタイプサイトを公開',           prefix:'🚀' },
+  ],
+};
+
+/* ============================================================
+   GITHUB GIST API
+============================================================ */
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+function setToken(t) { localStorage.setItem(TOKEN_KEY, t.trim()); }
+
+function ghHeaders() {
+  return {
+    'Authorization': `Bearer ${getToken()}`,
+    'Content-Type': 'application/json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+}
+
+async function gistGet() {
+  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    headers: ghHeaders(),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+async function gistPatch(files) {
+  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    method: 'PATCH',
+    headers: ghHeaders(),
+    body: JSON.stringify({ files }),
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!res.ok) throw new Error(res.status);
+}
+
+/* ============================================================
+   SYNC STATUS UI
+============================================================ */
+let _syncFadeTimer = null;
+function setSyncStatus(status) {
+  const el = document.getElementById('sync-pill');
+  clearTimeout(_syncFadeTimer);
+  el.className = 'sync-pill ' + status;
+  if (status === 'saving') {
+    el.innerHTML = '<span class="sync-spin">⟳</span> 同期中…';
+  } else if (status === 'ok') {
+    el.innerHTML = '✅ 同期済み';
+    _syncFadeTimer = setTimeout(() => { el.className = 'sync-pill hidden'; }, 3500);
+  } else if (status === 'error') {
+    el.innerHTML = '❌ 同期エラー（トークン確認して）';
+  } else {
+    el.className = 'sync-pill hidden';
+  }
+}
+
+/* ============================================================
+   DEBOUNCED GIST SAVE
+============================================================ */
+let _saveTimer = null;
+function scheduleSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(doGistSave, 1500);
+}
+
+async function doGistSave() {
+  if (!getToken()) return;
+  setSyncStatus('saving');
+  try {
+    const tasks = { todo: state.todo, inprog: state.inprog, done: state.done };
+    const hs    = habitsLoadLocal();
+    await gistPatch({
+      [TASKS_FILE]:  { content: JSON.stringify(tasks, null, 2) },
+      [HABITS_FILE]: { content: JSON.stringify(hs, null, 2) },
+    });
+    setSyncStatus('ok');
+  } catch(_) {
+    setSyncStatus('error');
+  }
+}
+
+/* ============================================================
+   LOCAL CACHE
+============================================================ */
+function loadFromCache() {
+  try {
+    const r = localStorage.getItem(CACHE_KEY);
+    if (r) return JSON.parse(r);
+  } catch(_) {}
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+function saveToCache(s) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(s)); } catch(_) {}
+}
+
+function save(s) {
+  saveToCache(s);
+  scheduleSave();
+}
+
+/* ============================================================
+   GIST INIT (runs on load, async)
+============================================================ */
+async function initFromGist() {
+  if (!getToken()) { showTokenSetup(); return; }
+  setSyncStatus('saving');
+  try {
+    const gist = await gistGet();
+
+    // Tasks
+    const tasksRaw = gist.files[TASKS_FILE]?.content;
+    if (tasksRaw) {
+      const remote = JSON.parse(tasksRaw);
+      if (remote.todo || remote.inprog || remote.done) {
+        state = migrateState(remote); // category未設定カードに 'pinkcity' を付与
+        saveToCache(state);
+        renderAll();
+        scheduleSave(); // カテゴリ付きでGistにも保存し直す
+      }
+    }
+
+    // Habits
+    const habitsRaw = gist.files[HABITS_FILE]?.content;
+    if (habitsRaw) {
+      const remoteHabits = JSON.parse(habitsRaw);
+      habitsSaveLocal(remoteHabits);
+      renderHabitStrip();
+    }
+
+    setSyncStatus('ok');
+  } catch(_) {
+    setSyncStatus('error');
+  }
+}
+
+/* ============================================================
+   TOKEN SETUP UI
+============================================================ */
+function showTokenSetup() {
+  document.getElementById('token-setup-overlay').classList.add('open');
+}
+function hideTokenSetup() {
+  document.getElementById('token-setup-overlay').classList.remove('open');
+}
+
+document.getElementById('token-save').addEventListener('click', async () => {
+  const t = document.getElementById('token-input').value.trim();
+  if (!t) return;
+  setToken(t);
+  hideTokenSetup();
+  await initFromGist();
+});
+document.getElementById('token-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('token-save').click();
+});
+
+// ──────────────────────────────────────────────
+// Migrate old cards: add default category if missing
+function migrateState(s) {
+  ['todo','inprog','done'].forEach(col => {
+    if (!s[col]) return;
+    s[col].forEach(c => { if (!c.category) c.category = 'pinkcity'; });
+  });
+  return s;
+}
+
+let state = migrateState(loadFromCache());
+
+/* ============================================================
+   FILTER
+============================================================ */
+let currentFilter = 'all'; // 'all' | 'pinkcity' | 'private'
+
+function updateFilterCounts() {
+  const all = state.todo.length + state.inprog.length + state.done.length;
+  const pc  = ['todo','inprog','done'].reduce((n,c) => n + state[c].filter(x => (x.category || 'pinkcity') === 'pinkcity').length, 0);
+  const prv = ['todo','inprog','done'].reduce((n,c) => n + state[c].filter(x => x.category === 'private').length, 0);
+  document.getElementById('fc-all').textContent     = all;
+  document.getElementById('fc-pinkcity').textContent = pc;
+  document.getElementById('fc-private').textContent  = prv;
+}
+
+document.getElementById('filter-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  currentFilter = btn.dataset.filter;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b === btn);
+    b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+  });
+  renderAll();
+  if (navigator.vibrate) navigator.vibrate(8);
+});
+
+/* ============================================================
+   RENDER
+============================================================ */
+function isMobile() { return window.innerWidth <= 680; }
+
+function renderAll() {
+  COL_ORDER.forEach(renderColumn);
+  updateFilterCounts();
+  if (isMobile()) renderOnHoldStrip();
+}
+
+/* ON HOLD ストリップ（モバイル専用） */
+function renderOnHoldStrip() {
+  const visible = currentFilter === 'all'
+    ? state.inprog
+    : state.inprog.filter(c => (c.category || 'pinkcity') === currentFilter);
+
+  // バッジ更新
+  document.getElementById('onhold-badge').textContent = visible.length;
+
+  // カードを onhold-inner に描画
+  const inner = document.getElementById('onhold-inner');
+  inner.innerHTML = '';
+  visible.forEach(card => {
+    const el = makeCardEl(card, 'inprog');
+    el.style.marginBottom = '8px';
+    inner.appendChild(el);
+  });
+}
+
+document.getElementById('onhold-toggle').addEventListener('click', () => {
+  const strip = document.getElementById('onhold-strip');
+  const isOpen = strip.classList.toggle('open');
+  document.getElementById('onhold-toggle').setAttribute('aria-expanded', isOpen);
+  if (navigator.vibrate) navigator.vibrate(8);
+});
+
+function renderColumn(colId) {
+  const col = document.getElementById('col-' + colId);
+  col.innerHTML = '';
+  const meta = COL_META[colId];
+
+  // フィルター適用
+  const visible = currentFilter === 'all'
+    ? state[colId]
+    : state[colId].filter(c => (c.category || 'pinkcity') === currentFilter);
+
+  const hdr = document.createElement('div');
+  hdr.className = 'col-header';
+  hdr.innerHTML = `
+    <h2 class="col-title">${meta.label}</h2>
+    <div class="col-controls">
+      <span class="col-badge">${visible.length}</span>
+      <button class="add-btn" data-col="${colId}" aria-label="タスクを追加">＋</button>
+    </div>`;
+  col.appendChild(hdr);
+
+  const cards = document.createElement('div');
+  cards.className = 'col-cards';
+  cards.id = 'cards-' + colId;
+  visible.forEach(card => cards.appendChild(makeCardEl(card, colId)));
+  col.appendChild(cards);
+}
+
+function formatDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const M = d.getMonth() + 1;
+  const D = d.getDate();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `✅ ${M}/${D} ${hh}:${mm} 完了`;
+}
+
+function makeCardEl(card, colId) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.dataset.id  = card.id;
+  el.dataset.col = colId;
+  el.draggable   = true;
+
+  const meta      = COL_META[colId];
+  const nextLabel = meta.next ? '→ ' + COL_LABEL[meta.next] : '';
+  const prevLabel = meta.prev ? COL_LABEL[meta.prev] + ' ←' : '';
+  const dateStr   = colId === 'done' ? formatDate(card.completedAt) : null;
+
+  const cat = card.category || 'pinkcity';
+  if (cat === 'private') el.classList.add('card--private');
+
+  // カテゴリバッジ (ALLビューのみ表示)
+  const catBadge = currentFilter === 'all'
+    ? `<span class="cat-badge cat-badge--${cat}">${cat === 'private' ? '🔒' : '💖'}</span>`
+    : '';
+
+  // ハート完了ボタン（todo/inprogのみ）
+  const doneBtn = colId !== 'done'
+    ? `<button class="card-done-btn" aria-label="完了にする">♡</button>`
+    : '';
+
+  el.innerHTML = `
+    ${nextLabel ? `<div class="swipe-hint swipe-hint--right" aria-hidden="true">${nextLabel} ▶</div>` : ''}
+    ${prevLabel ? `<div class="swipe-hint swipe-hint--left"  aria-hidden="true">◀ ${prevLabel}</div>` : ''}
+    <span class="card-prefix">${card.prefix}</span>
+    <span class="card-text">${escHtml(card.text)}</span>
+    ${catBadge}
+    ${doneBtn}
+    ${dateStr ? `<span class="card-date">${dateStr}</span>` : ''}`;
+
+  // ♡ボタン：タップ→塗りつぶしハートに変化→カードフライアウト
+  if (colId !== 'done') {
+    const btn = el.querySelector('.card-done-btn');
+    btn.addEventListener('click', ev => {
+      ev.stopPropagation();
+      // ① ハート塗りつぶし＋グロー
+      btn.textContent = '♥';
+      btn.classList.add('tapped');
+      if (navigator.vibrate) navigator.vibrate(18);
+      // ② 150ms後にカードフライアウト
+      setTimeout(() => {
+        el.style.transition = 'transform .28s cubic-bezier(.4,0,1,1), opacity .28s';
+        el.style.transform  = 'translateX(115%) rotate(8deg)';
+        el.style.opacity    = '0';
+      }, 150);
+      // ③ 完了カラムへ移動
+      setTimeout(() => moveCardTo(card.id, colId, 'done'), 400);
+    });
+  }
+  return el;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ============================================================
+   ACTION SHEET
+============================================================ */
+let sheetCardId  = null;
+let sheetColId   = null;
+let deleteConfirm = false;
+
+function openActionSheet(cardId, colId) {
+  sheetCardId   = cardId;
+  sheetColId    = colId;
+  deleteConfirm = false;
+
+  const found = state[colId].find(c => c.id === cardId);
+  if (!found) return;
+
+  // Preview（編集可能）
+  const previewEl = document.getElementById('sheet-preview');
+  previewEl.value = found.text;
+  setTimeout(() => previewEl.focus(), 120);
+
+  // Build actions
+  const container = document.getElementById('sheet-actions');
+  container.innerHTML = '';
+
+  const meta = COL_META[colId];
+
+  // todo → 完了直行ボタン（最上部に大きく）
+  if (colId === 'todo') {
+    const directBtn = document.createElement('button');
+    directBtn.className = 'sheet-action sheet-action--done-btn';
+    directBtn.innerHTML = `<span>✨</span><span>DONE! 完了にする</span>`;
+    directBtn.addEventListener('click', () => { moveCardTo(sheetCardId, sheetColId, 'done'); closeSheet(); });
+    container.appendChild(directBtn);
+  }
+
+  // Move to next column
+  if (meta.next) {
+    const nextLabel = COL_LABEL[meta.next];
+    const isDone = meta.next === 'done';
+    if (isDone && colId === 'todo') {
+      // todo→done は上で追加済みなのでスキップ
+    } else {
+      const btn = document.createElement('button');
+      btn.className = isDone
+        ? 'sheet-action sheet-action--done-btn'
+        : 'sheet-action sheet-action--move';
+      btn.innerHTML = isDone
+        ? `<span>✨</span><span>DONE! 完了にする</span>`
+        : `<span>▶️</span><span>${nextLabel} へ移動</span>`;
+      btn.addEventListener('click', () => { moveCardTo(sheetCardId, sheetColId, meta.next); closeSheet(); });
+      container.appendChild(btn);
+    }
+  }
+
+  // Move to prev column
+  if (meta.prev) {
+    const prevLabel = COL_LABEL[meta.prev];
+    const btn = document.createElement('button');
+    btn.className = 'sheet-action sheet-action--move';
+    btn.innerHTML = `<span>↩️</span><span>${prevLabel} に戻す</span>`;
+    btn.addEventListener('click', () => { moveCardTo(sheetCardId, sheetColId, meta.prev); closeSheet(); });
+    container.appendChild(btn);
+  }
+
+  // Toggle category
+  const found2 = state[colId].find(c => c.id === cardId);
+  if (found2) {
+    const curCat   = found2.category || 'pinkcity';
+    const otherCat = curCat === 'pinkcity' ? 'private' : 'pinkcity';
+    const catBtn   = document.createElement('button');
+    catBtn.className = 'sheet-action sheet-action--move';
+    catBtn.innerHTML = otherCat === 'private'
+      ? `<span>🔒</span><span>プライベートに変更</span>`
+      : `<span>💖</span><span>PINK CITYに変更</span>`;
+    catBtn.addEventListener('click', () => {
+      const card2 = state[colId].find(c => c.id === cardId);
+      if (card2) { card2.category = otherCat; save(state); renderAll(); }
+      closeSheet(); // cardId/colId はクロージャで保持されてるのでOK
+    });
+    container.appendChild(catBtn);
+  }
+
+  // Delete (2-tap confirm)
+  const delBtn = document.createElement('button');
+  delBtn.className = 'sheet-action sheet-action--del';
+  delBtn.id = 'del-btn';
+  delBtn.innerHTML = `<span>🗑️</span><span>削除する</span>`;
+  delBtn.addEventListener('click', () => {
+    if (!deleteConfirm) {
+      deleteConfirm = true;
+      delBtn.classList.add('confirming');
+      delBtn.innerHTML = `<span>⚠️</span><span>本当に削除？ もう一度タップで確定</span>`;
+    } else {
+      deleteCard(sheetCardId, sheetColId);
+      closeSheet();
+    }
+  });
+  container.appendChild(delBtn);
+
+  document.getElementById('action-overlay').classList.add('open');
+}
+
+function closeSheet() {
+  // テキストが変更されていれば保存
+  if (sheetCardId && sheetColId) {
+    const newText = document.getElementById('sheet-preview').value.trim();
+    const card = state[sheetColId].find(c => c.id === sheetCardId);
+    if (card && newText && newText !== card.text) {
+      card.text = newText;
+      save(state);
+      renderAll();
+    }
+  }
+  document.getElementById('action-overlay').classList.remove('open');
+  sheetCardId = null; sheetColId = null; deleteConfirm = false;
+}
+
+document.getElementById('sheet-cancel').addEventListener('click', closeSheet);
+document.getElementById('action-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('action-overlay')) closeSheet();
+});
+
+/* ============================================================
+   CARD OPERATIONS
+============================================================ */
+function moveCardTo(id, fromCol, toCol) {
+  const idx = state[fromCol].findIndex(c => c.id === id);
+  if (idx === -1) return;
+  const [card] = state[fromCol].splice(idx, 1);
+  // 完了カラムへ移動した時刻を記録、それ以外は削除
+  if (toCol === 'done') {
+    card.completedAt = new Date().toISOString();
+  } else {
+    delete card.completedAt;
+  }
+  state[toCol].unshift(card);
+  save(state);
+  renderAll();
+  if (navigator.vibrate) navigator.vibrate(12);
+}
+
+function moveCard(id, fromCol, toCol, beforeId) {
+  const idx = state[fromCol].findIndex(c => c.id === id);
+  if (idx === -1) return;
+  const [card] = state[fromCol].splice(idx, 1);
+  const to = state[toCol];
+  if (beforeId) {
+    const bi = to.findIndex(c => c.id === beforeId);
+    to.splice(bi === -1 ? to.length : bi, 0, card);
+  } else {
+    to.push(card);
+  }
+  save(state);
+}
+
+function deleteCard(id, colId) {
+  state[colId] = state[colId].filter(c => c.id !== id);
+  save(state);
+  renderAll();
+}
+
+/* ============================================================
+   ADD TASK
+============================================================ */
+let addTargetCol = null;
+let addCategory  = 'pinkcity';
+let editCardId   = null; // 編集中のカードID（nullなら追加モード）
+let editCardCol  = null;
+
+function openAddModal(colId) {
+  editCardId  = null;
+  editCardCol = null;
+  addTargetCol = colId;
+  if (currentFilter !== 'all') addCategory = currentFilter;
+
+  document.getElementById('modal-title').textContent = '✨ ' + COL_LABEL[colId] + ' に追加';
+  document.getElementById('cat-picker').style.display = '';
+
+  const picker = document.getElementById('cat-picker');
+  picker.querySelectorAll('.cat-pick-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.cat === addCategory);
+  });
+
+  const inp = document.getElementById('modal-input');
+  inp.value = '';
+  document.getElementById('modal-confirm').textContent = '追加 💖';
+  document.getElementById('add-overlay').classList.add('open');
+  setTimeout(() => inp.focus(), 100);
+}
+
+function openEditModal(cardId, colId) {
+  const card = state[colId].find(c => c.id === cardId);
+  if (!card) return;
+
+  editCardId  = cardId;
+  editCardCol = colId;
+  addTargetCol = null;
+
+  document.getElementById('modal-title').textContent = '✏️ 編集する';
+  document.getElementById('cat-picker').style.display = 'none'; // 編集時はカテゴリ変更不要
+
+  const inp = document.getElementById('modal-input');
+  inp.value = card.text;
+  document.getElementById('modal-confirm').textContent = '保存 💖';
+  document.getElementById('add-overlay').classList.add('open');
+  setTimeout(() => { inp.focus(); inp.select(); }, 100);
+}
+
+function closeAddModal() {
+  document.getElementById('add-overlay').classList.remove('open');
+  addTargetCol = null; editCardId = null; editCardCol = null;
+}
+
+function confirmAdd() {
+  const text = document.getElementById('modal-input').value.trim();
+  if (!text) return;
+
+  if (editCardId) {
+    // 編集モード：テキストだけ更新
+    const card = state[editCardCol].find(c => c.id === editCardId);
+    if (card) { card.text = text; save(state); renderAll(); }
+    closeAddModal();
+    return;
+  }
+
+  // 追加モード
+  if (!addTargetCol) return;
+  const prefix = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
+  state[addTargetCol].unshift({ id:uid(), text, prefix, category: addCategory });
+  save(state); renderAll(); closeAddModal();
+}
+
+// カテゴリピッカーのクリック
+document.getElementById('cat-picker').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-pick-btn');
+  if (!btn) return;
+  addCategory = btn.dataset.cat;
+  document.querySelectorAll('.cat-pick-btn').forEach(b =>
+    b.classList.toggle('selected', b === btn));
+});
+
+document.getElementById('modal-cancel').addEventListener('click', closeAddModal);
+document.getElementById('modal-confirm').addEventListener('click', confirmAdd);
+document.getElementById('modal-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmAdd();
+  if (e.key === 'Escape') closeAddModal();
+});
+document.getElementById('add-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('add-overlay')) closeAddModal();
+});
+
+/* ============================================================
+   DELEGATED CLICK (board)
+============================================================ */
+document.querySelector('.board').addEventListener('click', e => {
+  const addBtn = e.target.closest('.add-btn');
+  if (addBtn) { openAddModal(addBtn.dataset.col); return; }
+
+  // Card tap → action sheet (only if not starting a drag)
+  const card = e.target.closest('.card');
+  if (card && !card.classList.contains('dragging')) {
+    openActionSheet(card.dataset.id, card.dataset.col);
+  }
+});
+
+/* ============================================================
+   DRAG & DROP — Desktop HTML5
+============================================================ */
+let draggingId  = null;
+let draggingCol = null;
+let placeholder = null;
+const ghost     = document.getElementById('ghost');
+
+document.querySelector('.board').addEventListener('dragstart', e => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  draggingId  = card.dataset.id;
+  draggingCol = card.dataset.col;
+  card.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', draggingId);
+  setTimeout(() => { if (card) card.style.opacity = '.35'; }, 0);
+});
+
+document.querySelector('.board').addEventListener('dragend', e => {
+  const card = e.target.closest('.card');
+  if (card) { card.classList.remove('dragging'); card.style.opacity = ''; }
+  removePlaceholder();
+  document.querySelectorAll('.column').forEach(c => c.classList.remove('drag-over'));
+  draggingId = null; draggingCol = null;
+});
+
+document.querySelectorAll('.column').forEach(col => {
+  col.addEventListener('dragover', e => {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    col.classList.add('drag-over');
+    showPlaceholder(col, getCardIdBefore(e.clientY, col));
+  });
+  col.addEventListener('dragleave', e => {
+    if (!col.contains(e.relatedTarget)) { col.classList.remove('drag-over'); removePlaceholder(); }
+  });
+  col.addEventListener('drop', e => {
+    e.preventDefault(); col.classList.remove('drag-over'); removePlaceholder();
+    if (!draggingId) return;
+    moveCard(draggingId, draggingCol, col.id.replace('col-',''), getCardIdBefore(e.clientY, col));
+    renderAll();
+  });
+});
+
+function getCardsContainer(colEl) {
+  return colEl.querySelector('.col-cards') || colEl;
+}
+function getCardIdBefore(y, colEl) {
+  const container = getCardsContainer(colEl);
+  for (const card of [...container.querySelectorAll('.card:not(.dragging)')]) {
+    const r = card.getBoundingClientRect();
+    if (y < r.top + r.height / 2) return card.dataset.id;
+  }
+  return null;
+}
+function showPlaceholder(colEl, beforeId) {
+  removePlaceholder();
+  placeholder = document.createElement('div');
+  placeholder.className = 'drop-placeholder';
+  const container = getCardsContainer(colEl);
+  const target = beforeId && container.querySelector(`[data-id="${beforeId}"]`);
+  container.insertBefore(placeholder, target || null);
+}
+function removePlaceholder() { if (placeholder) { placeholder.remove(); placeholder = null; } }
+
+/* ============================================================
+   TOUCH — unified state machine
+   States: IDLE → PENDING → SWIPING | DRAGGING
+   - short tap   → action sheet
+   - horiz swipe → column move (Tinder-style)
+   - long press  → drag & drop
+============================================================ */
+const SWIPE_THRESHOLD  = 75;   // px to trigger column move
+const SWIPE_START_MIN  = 10;   // px before we lock to swipe mode
+const LONG_PRESS_MS    = 320;
+
+let tcState    = 'IDLE'; // IDLE | PENDING | SWIPING | DRAGGING
+let tcCard     = null;
+let tcStartX   = 0;
+let tcStartY   = 0;
+let tcOffsetX  = 0;
+let tcOffsetY  = 0;
+let tcLongTimer = null;
+
+function tcReset() {
+  tcState = 'IDLE';
+  if (tcCard) {
+    tcCard.style.transform = '';
+    tcCard.style.transition = '';
+    tcCard.querySelectorAll('.swipe-hint').forEach(h => { h.style.opacity = ''; });
+    tcCard.classList.remove('dragging');
+    tcCard = null;
+  }
+  clearTimeout(tcLongTimer); tcLongTimer = null;
+  removePlaceholder();
+  document.querySelectorAll('.column').forEach(c => c.classList.remove('drag-over'));
+  ghost.style.display = 'none';
+}
+
+document.querySelector('.board').addEventListener('touchstart', e => {
+  if (tcState !== 'IDLE') return;
+  const card = e.target.closest('.card');
+  if (!card || e.target.closest('.add-btn')) return;
+
+  tcCard   = card;
+  tcStartX = e.touches[0].clientX;
+  tcStartY = e.touches[0].clientY;
+  tcState  = 'PENDING';
+
+  // long-press → drag
+  tcLongTimer = setTimeout(() => {
+    if (tcState !== 'PENDING') return;
+    tcState = 'DRAGGING';
+    const rect = card.getBoundingClientRect();
+    tcOffsetX = tcStartX - rect.left;
+    tcOffsetY = tcStartY - rect.top;
+
+    ghost.innerHTML = card.innerHTML;
+    ghost.querySelectorAll('.swipe-hint').forEach(h => h.remove());
+    ghost.style.cssText = `display:flex;align-items:center;gap:8px;
+      width:${rect.width}px;left:${rect.left}px;top:${rect.top}px;
+      position:fixed;z-index:9999;pointer-events:none;opacity:.88;
+      transform:rotate(2deg) scale(1.04);
+      filter:drop-shadow(0 8px 24px rgba(255,45,135,.55));
+      background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,220,240,.92));
+      border-left:4px solid #FF2D87;border-radius:12px;padding:12px 14px 12px 13px;
+      color:#3d0025;font-size:.875rem;font-weight:700;`;
+    card.classList.add('dragging');
+    if (navigator.vibrate) navigator.vibrate(18);
+  }, LONG_PRESS_MS);
+}, { passive: true });
+
+document.querySelector('.board').addEventListener('touchmove', e => {
+  if (tcState === 'IDLE' || !tcCard) return;
+
+  const dx = e.touches[0].clientX - tcStartX;
+  const dy = e.touches[0].clientY - tcStartY;
+
+  if (tcState === 'PENDING') {
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    if (adx < SWIPE_START_MIN && ady < SWIPE_START_MIN) return;
+
+    clearTimeout(tcLongTimer); tcLongTimer = null;
+
+    if (adx > ady * 1.2) {
+      // horizontal → swipe mode
+      tcState = 'SWIPING';
+    } else {
+      // vertical → let scroll happen
+      tcReset(); return;
+    }
+  }
+
+  if (tcState === 'SWIPING') {
+    e.preventDefault();
+    const rotation = dx / 22;
+    tcCard.style.transition = 'none';
+    tcCard.style.transform  = `translateX(${dx}px) rotate(${rotation}deg)`;
+
+    // show swipe hint
+    const progress = Math.min(1, Math.abs(dx) / SWIPE_THRESHOLD);
+    const colMeta  = COL_META[tcCard.dataset.col];
+    if (dx > 0 && colMeta.next) {
+      const h = tcCard.querySelector('.swipe-hint--right');
+      if (h) h.style.opacity = progress;
+      const hl = tcCard.querySelector('.swipe-hint--left');
+      if (hl) hl.style.opacity = 0;
+    } else if (dx < 0 && colMeta.prev) {
+      const h = tcCard.querySelector('.swipe-hint--left');
+      if (h) h.style.opacity = progress;
+      const hr = tcCard.querySelector('.swipe-hint--right');
+      if (hr) hr.style.opacity = 0;
+    }
+
+    // haptic at threshold
+    if (Math.abs(dx) === SWIPE_THRESHOLD && navigator.vibrate) navigator.vibrate(10);
+    return;
+  }
+
+  if (tcState === 'DRAGGING') {
+    e.preventDefault();
+    const touch = e.touches[0];
+    ghost.style.left = (touch.clientX - tcOffsetX) + 'px';
+    ghost.style.top  = (touch.clientY - tcOffsetY) + 'px';
+
+    ghost.style.display = 'none';
+    const under = document.elementFromPoint(touch.clientX, touch.clientY);
+    ghost.style.display = 'flex';
+    document.querySelectorAll('.column').forEach(c => c.classList.remove('drag-over'));
+    const hCol = under && under.closest('.column');
+    if (hCol) { hCol.classList.add('drag-over'); showPlaceholder(hCol, getCardIdBefore(touch.clientY, hCol)); }
+    else removePlaceholder();
+  }
+}, { passive: false });
+
+document.querySelector('.board').addEventListener('touchend', e => {
+  if (tcState === 'IDLE') return;
+  clearTimeout(tcLongTimer); tcLongTimer = null;
+
+  if (tcState === 'PENDING') {
+    // short tap → action sheet（✅ボタンはclick側で処理済みのためスキップ）
+    const card = tcCard;
+    const wasDoneBtn = e.target.closest('.card-done-btn');
+    tcReset();
+    if (card && !card.classList.contains('dragging') && !wasDoneBtn) {
+      openActionSheet(card.dataset.id, card.dataset.col);
+    }
+    return;
+  }
+
+  if (tcState === 'SWIPING') {
+    const dx      = e.changedTouches[0].clientX - tcStartX;
+    const adx     = Math.abs(dx);
+    const colId   = tcCard.dataset.col;
+    const cardId  = tcCard.dataset.id;
+    const colMeta = COL_META[colId];
+    const toCol   = dx > 0 ? colMeta.next : colMeta.prev;
+    const card    = tcCard;
+
+    if (adx >= SWIPE_THRESHOLD && toCol) {
+      // fly off
+      const flyX = dx > 0 ? window.innerWidth : -window.innerWidth;
+      card.style.transition = 'transform .28s cubic-bezier(.4,0,1,1), opacity .28s';
+      card.style.transform  = `translateX(${flyX}px) rotate(${flyX/60}deg)`;
+      card.style.opacity    = '0';
+      setTimeout(() => { moveCardTo(cardId, colId, toCol); }, 260);
+      if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
+    } else {
+      // snap back
+      card.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+      card.style.transform  = 'translateX(0) rotate(0deg)';
+      card.querySelectorAll('.swipe-hint').forEach(h => { h.style.opacity = ''; });
+    }
+    tcState = 'IDLE'; tcCard = null;
+    return;
+  }
+
+  if (tcState === 'DRAGGING') {
+    const touch = e.changedTouches[0];
+    ghost.style.display = 'none';
+    const under = document.elementFromPoint(touch.clientX, touch.clientY);
+    document.querySelectorAll('.column').forEach(c => c.classList.remove('drag-over'));
+    removePlaceholder();
+    const hCol = under && under.closest('.column');
+    if (hCol) moveCard(tcCard.dataset.id, tcCard.dataset.col, hCol.id.replace('col-',''), getCardIdBefore(touch.clientY, hCol));
+    tcReset();
+    renderAll();
+    if (navigator.vibrate) navigator.vibrate(12);
+  }
+}, { passive: true });
+
+/* ============================================================
+   HABITS
+============================================================ */
+const HABITS_KEY = 'pinkcity-habits-v1';
+const DEFAULT_HABITS = [
+  { id: 'h1', name: 'Instagram投稿', emoji: '📸' },
+  { id: 'h2', name: 'TikTok投稿',    emoji: '🎵' },
+  { id: 'h3', name: 'PINK収集メモ',  emoji: '🩷' },
+];
+const EMOJI_OPTIONS = ['📸','🎵','🩷','💖','✨','🌸','💎','🔥','💅','📖','🎬','📱','🏃','💪','🧘','📝','🎯','🌟','💌','🛍️'];
+
+function habitsLoadLocal() {
+  try {
+    const raw = localStorage.getItem(HABITS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(_) {}
+  return { habits: JSON.parse(JSON.stringify(DEFAULT_HABITS)), records: {} };
+}
+function habitsSaveLocal(hs) {
+  try { localStorage.setItem(HABITS_KEY, JSON.stringify(hs)); } catch(_) {}
+}
+// Public API (used throughout)
+function habitsLoad()    { return habitsLoadLocal(); }
+function habitsSave(hs)  { habitsSaveLocal(hs); scheduleSave(); }
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function dateKey(daysAgo) {
+  const d = new Date(); d.setDate(d.getDate() - daysAgo);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function calcStreak(habitId, records) {
+  let streak = 0;
+  // Check yesterday backwards first
+  let i = 1;
+  while (true) {
+    const k = dateKey(i);
+    if (records[k] && records[k][habitId]) { streak++; i++; }
+    else break;
+  }
+  // If today is also checked, +1
+  if (records[todayKey()] && records[todayKey()][habitId]) streak++;
+  return streak;
+}
+
+function burstParticles(x, y) {
+  const symbols = ['✨','💖','🌸','⭐','💫','🩷','💎','✦'];
+  const angles = [0, 45, 90, 135, 180, 225, 270, 315];
+  angles.forEach((angle, i) => {
+    const el = document.createElement('span');
+    el.className = 'burst-particle';
+    el.textContent = symbols[i % symbols.length];
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    el.style.setProperty('--a', angle + 'deg');
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 700);
+  });
+}
+
+function showAllDoneBanner() {
+  const banner = document.getElementById('all-done-banner');
+  banner.classList.remove('show');
+  // Force reflow
+  void banner.offsetWidth;
+  banner.classList.add('show');
+  setTimeout(() => banner.classList.remove('show'), 2300);
+}
+
+function renderHabitStrip() {
+  const hs = habitsLoad();
+  const today = todayKey();
+  const todayRec = hs.records[today] || {};
+  const strip = document.getElementById('habit-strip');
+  const addBtn = document.getElementById('habit-add-open');
+
+  // Remove existing habit cards (keep label and addBtn)
+  strip.querySelectorAll('.habit-card').forEach(c => c.remove());
+
+  hs.habits.forEach(habit => {
+    const checked = !!todayRec[habit.id];
+    const streak  = calcStreak(habit.id, hs.records);
+
+    const card = document.createElement('div');
+    card.className = 'habit-card' + (checked ? ' checked' : '');
+    card.dataset.habitId = habit.id;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-pressed', checked ? 'true' : 'false');
+    card.innerHTML = `
+      <span class="habit-check" aria-hidden="true">✅</span>
+      <span class="habit-emoji">${habit.emoji}</span>
+      <span class="habit-name">${escHtml(habit.name)}</span>
+      <span class="habit-streak">🔥${streak}day</span>`;
+
+    card.addEventListener('click', () => toggleHabit(habit.id, card));
+    strip.insertBefore(card, addBtn);
+  });
+}
+
+function toggleHabit(habitId, cardEl) {
+  const hs = habitsLoad();
+  const today = todayKey();
+  if (!hs.records[today]) hs.records[today] = {};
+  const wasChecked = !!hs.records[today][habitId];
+  if (wasChecked) {
+    delete hs.records[today][habitId];
+  } else {
+    hs.records[today][habitId] = true;
+  }
+  habitsSave(hs);
+
+  // Visual feedback
+  cardEl.classList.toggle('checked', !wasChecked);
+  cardEl.setAttribute('aria-pressed', !wasChecked ? 'true' : 'false');
+  cardEl.classList.remove('pop');
+  void cardEl.offsetWidth;
+  cardEl.classList.add('pop');
+
+  if (!wasChecked) {
+    // Particle burst from card center
+    const rect = cardEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    burstParticles(cx, cy);
+    if (navigator.vibrate) navigator.vibrate(18);
+
+    // Check if all done
+    const todayRec = hs.records[today] || {};
+    const allDone = hs.habits.every(h => !!todayRec[h.id]);
+    if (allDone) setTimeout(showAllDoneBanner, 300);
+  } else {
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  // Re-render streaks
+  renderHabitStrip();
+}
+
+/* Habit Add Sheet */
+let selectedEmoji = '🩷';
+
+function openHabitAdd() {
+  selectedEmoji = '🩷';
+  document.getElementById('habit-name-input').value = '';
+  buildEmojiPicker();
+  document.getElementById('habit-add-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('habit-name-input').focus(), 150);
+}
+function closeHabitAdd() {
+  document.getElementById('habit-add-overlay').classList.remove('open');
+}
+function buildEmojiPicker() {
+  const grid = document.getElementById('emoji-picker-grid');
+  grid.innerHTML = '';
+  EMOJI_OPTIONS.forEach(em => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-picker-btn' + (em === selectedEmoji ? ' selected' : '');
+    btn.textContent = em;
+    btn.addEventListener('click', () => {
+      selectedEmoji = em;
+      grid.querySelectorAll('.emoji-picker-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    grid.appendChild(btn);
+  });
+}
+function confirmHabitAdd() {
+  const name = document.getElementById('habit-name-input').value.trim();
+  if (!name) return;
+  const hs = habitsLoad();
+  hs.habits.push({ id: 'h' + Date.now().toString(36), name, emoji: selectedEmoji });
+  habitsSave(hs);
+  closeHabitAdd();
+  renderHabitStrip();
+}
+
+document.getElementById('habit-add-open').addEventListener('click', openHabitAdd);
+document.getElementById('habit-add-cancel').addEventListener('click', closeHabitAdd);
+document.getElementById('habit-add-confirm').addEventListener('click', confirmHabitAdd);
+document.getElementById('habit-name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmHabitAdd();
+  if (e.key === 'Escape') closeHabitAdd();
+});
+document.getElementById('habit-add-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('habit-add-overlay')) closeHabitAdd();
+});
+
+renderHabitStrip();
+
+/* ============================================================
+   INIT
+============================================================ */
+renderAll();
+// Async: fetch latest from Gist and update UI
+initFromGist();
+</script>
+</body>
+</html>
