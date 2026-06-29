@@ -1415,6 +1415,51 @@ function openActionSheet(cardId, colId) {
     container.appendChild(btn);
   }
 
+  // AI細分化
+  const aiBtn = document.createElement('button');
+  aiBtn.className = 'sheet-action sheet-action--move';
+  aiBtn.id = 'sheet-ai-btn';
+  aiBtn.innerHTML = `<span>✨</span><span>AIでタスクを細分化</span>`;
+  aiBtn.addEventListener('click', async () => {
+    const taskText = document.getElementById('sheet-preview').value.trim();
+    if (!taskText) return;
+    const cId = sheetCardId, col = sheetColId;
+
+    aiBtn.innerHTML = `<span class="ai-spin">✨</span><span>細分化中…</span>`;
+    aiBtn.style.opacity = '.6';
+    aiBtn.style.pointerEvents = 'none';
+
+    try {
+      const res = await fetch(AI_WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: taskText }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) throw new Error(res.status);
+      const { subtasks } = await res.json();
+      if (!subtasks?.length) throw new Error('No subtasks');
+
+      // 元のカードを削除してサブタスクに置き換え
+      state[col] = state[col].filter(c => c.id !== cId);
+      subtasks.reverse().forEach(t => {
+        const prefix = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
+        state[col].unshift({ id: uid(), text: t, prefix, category: (state[col][0]?.category || addCategory) });
+      });
+      save(state);
+      renderAll();
+      closeSheet();
+    } catch {
+      aiBtn.innerHTML = `<span>⚠️</span><span>失敗。もう一度</span>`;
+      aiBtn.style.opacity = '';
+      aiBtn.style.pointerEvents = '';
+      setTimeout(() => {
+        aiBtn.innerHTML = `<span>✨</span><span>AIでタスクを細分化</span>`;
+      }, 2500);
+    }
+  });
+  container.appendChild(aiBtn);
+
   // Toggle category
   const found2 = state[colId].find(c => c.id === cardId);
   if (found2) {
