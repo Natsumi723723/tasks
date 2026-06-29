@@ -426,6 +426,76 @@
     .modal-btn--ai.loading { opacity:.6; pointer-events:none; }
     .ai-spin { display:inline-block; animation:spin .7s linear infinite; }
 
+    /* ===== AI PREVIEW PANEL ===== */
+    .ai-preview-label {
+      font-family:'Outfit',sans-serif; font-size:.72rem; font-weight:700;
+      color:rgba(255,105,180,.5); text-transform:uppercase; letter-spacing:.07em;
+      padding:14px 20px 0; margin:0;
+    }
+    .ai-preview-original {
+      font-family:'Outfit',sans-serif; font-size:.86rem;
+      color:rgba(255,200,230,.65); padding:3px 20px 10px; margin:0;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .ai-preview-list {
+      padding:0 16px; display:flex; flex-direction:column; gap:7px;
+      max-height:42vh; overflow-y:auto;
+    }
+    .ai-preview-item {
+      display:flex; align-items:center; gap:6px;
+      background:rgba(255,45,135,.08); border:1.5px solid rgba(255,45,135,.22);
+      border-radius:12px; padding:4px 6px 4px 14px;
+    }
+    .ai-preview-item-input {
+      flex:1; background:transparent; border:none; outline:none;
+      font-family:'Outfit',sans-serif; font-size:.88rem; color:#fff; padding:8px 0;
+    }
+    .ai-preview-item-del {
+      flex-shrink:0; background:none; border:none;
+      color:rgba(255,105,180,.45); font-size:.82rem; cursor:pointer;
+      padding:6px 8px; -webkit-tap-highlight-color:transparent;
+      transition:color .15s;
+    }
+    .ai-preview-item-del:active { color:#FF2D87; }
+    .ai-preview-reprompt {
+      padding:10px 16px 4px; display:flex; gap:8px; align-items:flex-end;
+    }
+    .ai-preview-reprompt-input {
+      flex:1; background:rgba(255,255,255,.06);
+      border:1.5px solid rgba(255,45,135,.2); border-radius:12px;
+      color:#fff; font-family:'Outfit',sans-serif; font-size:.84rem;
+      padding:10px 14px; resize:none; outline:none;
+    }
+    .ai-preview-reprompt-input::placeholder { color:rgba(255,150,200,.35); }
+    .ai-preview-reprompt-input:focus { border-color:rgba(255,45,135,.5); }
+    .ai-preview-redo-btn {
+      flex-shrink:0;
+      background:rgba(139,92,246,.2); border:1.5px solid rgba(139,92,246,.4);
+      color:#c4b5fd; border-radius:12px;
+      font-family:'Outfit',sans-serif; font-size:.8rem; font-weight:700;
+      padding:10px 13px; cursor:pointer; white-space:nowrap;
+      -webkit-tap-highlight-color:transparent; transition:opacity .15s;
+    }
+    .ai-preview-redo-btn:disabled { opacity:.45; pointer-events:none; }
+    .ai-preview-footer {
+      display:flex; gap:10px; padding:12px 16px 32px;
+    }
+    .ai-preview-cancel-btn {
+      flex:1; background:rgba(255,45,135,.15);
+      border:1.5px solid rgba(255,45,135,.3); color:#FF69B4;
+      border-radius:14px; font-family:'Outfit',sans-serif;
+      font-size:.9rem; font-weight:800; padding:14px;
+      cursor:pointer; -webkit-tap-highlight-color:transparent;
+    }
+    .ai-preview-confirm-btn {
+      flex:2; background:linear-gradient(135deg,#FF2D87,#E91E8C); border:none;
+      color:#fff; border-radius:14px; font-family:'Outfit',sans-serif;
+      font-size:.9rem; font-weight:800; padding:14px; cursor:pointer;
+      box-shadow:0 4px 18px rgba(255,45,135,.45);
+      -webkit-tap-highlight-color:transparent;
+    }
+    .ai-preview-confirm-btn:active { transform:scale(.97); }
+
     /* ===== FOOTER ===== */
     .footer {
       position:relative; z-index:2; margin-top:28px; padding:16px;
@@ -950,6 +1020,25 @@
     <div class="sheet-actions" id="sheet-actions"></div>
     <div class="sheet-divider"></div>
     <button class="sheet-action--cancel" id="sheet-cancel">キャンセル</button>
+  </div>
+</div>
+
+<!-- AI Preview Panel -->
+<div class="overlay" id="ai-preview-overlay">
+  <div class="sheet" id="ai-preview-sheet">
+    <div class="sheet-handle"></div>
+    <p class="ai-preview-label">✨ AIの提案</p>
+    <p class="ai-preview-original" id="ai-preview-original-text"></p>
+    <div class="ai-preview-list" id="ai-preview-list"></div>
+    <div class="ai-preview-reprompt">
+      <textarea class="ai-preview-reprompt-input" id="ai-reprompt-input"
+        placeholder="追加の指示（例：もっと細かく、英語で）" rows="2"></textarea>
+      <button class="ai-preview-redo-btn" id="ai-reprompt-btn">🔄 やり直す</button>
+    </div>
+    <div class="ai-preview-footer">
+      <button class="ai-preview-cancel-btn" id="ai-preview-cancel">キャンセル</button>
+      <button class="ai-preview-confirm-btn" id="ai-preview-confirm">確定する 💖</button>
+    </div>
   </div>
 </div>
 
@@ -1496,37 +1585,19 @@ function openActionSheet(cardId, colId) {
     if (!taskText) return;
     const cId = sheetCardId, col = sheetColId;
 
-    aiBtn.innerHTML = `<span class="ai-spin">✨</span><span>細分化中…</span>`;
+    aiBtn.innerHTML = `<span class="ai-spin">✨</span><span>提案を生成中…</span>`;
     aiBtn.style.opacity = '.6';
     aiBtn.style.pointerEvents = 'none';
 
     try {
-      const res = await fetch(AI_WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task: taskText }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res.ok) throw new Error(res.status);
-      const { subtasks } = await res.json();
-      if (!subtasks?.length) throw new Error('No subtasks');
-
-      // 親カードを残してhasSubtasks=trueにし、直後にサブタスクを挿入
-      const parentIdx = state[col].findIndex(c => c.id === cId);
-      if (parentIdx !== -1) {
-        state[col][parentIdx].hasSubtasks = true;
-        const parentCat = state[col][parentIdx].category || addCategory;
-        const newSubs = subtasks.map(t => ({
-          id: uid(), text: t,
-          prefix: PREFIXES[Math.floor(Math.random() * PREFIXES.length)],
-          category: parentCat,
-          parentId: cId,
-        }));
-        state[col].splice(parentIdx + 1, 0, ...newSubs);
-      }
-      save(state);
-      renderAll();
+      const subtasks = await callAiBreakdown(taskText);
       closeSheet();
+      showAiPreview(subtasks, {
+        source: 'sheet',
+        originalTask: taskText,
+        cardId: cId,
+        cardCol: col,
+      });
     } catch {
       aiBtn.innerHTML = `<span>⚠️</span><span>失敗。もう一度</span>`;
       aiBtn.style.opacity = '';
@@ -1717,6 +1788,129 @@ document.getElementById('cat-picker').addEventListener('click', e => {
 
 const AI_WORKER_URL = 'https://pinkcity-ai-worker.sweet-summer-fruit-723.workers.dev';
 
+/* ============================================================
+   AI PREVIEW PANEL
+============================================================ */
+let aiPreviewCtx = null;
+
+async function callAiBreakdown(task, extraInstruction = '') {
+  const fullTask = extraInstruction
+    ? `${task}\n追加指示: ${extraInstruction}`
+    : task;
+  const res = await fetch(AI_WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task: fullTask }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(res.status);
+  const { subtasks } = await res.json();
+  if (!subtasks?.length) throw new Error('No subtasks');
+  return subtasks;
+}
+
+function renderAiPreviewList() {
+  const list = document.getElementById('ai-preview-list');
+  list.innerHTML = '';
+  aiPreviewCtx.subtasks.forEach((text, i) => {
+    const item = document.createElement('div');
+    item.className = 'ai-preview-item';
+    const inp = document.createElement('input');
+    inp.className = 'ai-preview-item-input';
+    inp.value = text;
+    inp.dataset.idx = i;
+    const del = document.createElement('button');
+    del.className = 'ai-preview-item-del';
+    del.textContent = '✕';
+    del.dataset.idx = i;
+    del.addEventListener('click', () => {
+      aiPreviewCtx.subtasks.splice(i, 1);
+      renderAiPreviewList();
+    });
+    item.appendChild(inp);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
+function showAiPreview(subtasks, ctx) {
+  aiPreviewCtx = { subtasks: [...subtasks], ...ctx };
+  document.getElementById('ai-preview-original-text').textContent = ctx.originalTask;
+  document.getElementById('ai-reprompt-input').value = '';
+  renderAiPreviewList();
+  document.getElementById('ai-preview-overlay').classList.add('open');
+}
+
+function closeAiPreview() {
+  document.getElementById('ai-preview-overlay').classList.remove('open');
+  aiPreviewCtx = null;
+}
+
+function collectAiPreviewSubtasks() {
+  return Array.from(document.querySelectorAll('.ai-preview-item-input'))
+    .map(el => el.value.trim())
+    .filter(Boolean);
+}
+
+document.getElementById('ai-preview-cancel').addEventListener('click', closeAiPreview);
+document.getElementById('ai-preview-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('ai-preview-overlay')) closeAiPreview();
+});
+
+document.getElementById('ai-preview-confirm').addEventListener('click', () => {
+  if (!aiPreviewCtx) return;
+  const subtasks = collectAiPreviewSubtasks();
+  if (!subtasks.length) return;
+
+  if (aiPreviewCtx.source === 'sheet') {
+    const { cardId, cardCol } = aiPreviewCtx;
+    const parentIdx = state[cardCol].findIndex(c => c.id === cardId);
+    if (parentIdx !== -1) {
+      state[cardCol][parentIdx].hasSubtasks = true;
+      const parentCat = state[cardCol][parentIdx].category || 'pinkcity';
+      const newSubs = subtasks.map(t => ({
+        id: uid(), text: t,
+        prefix: PREFIXES[Math.floor(Math.random() * PREFIXES.length)],
+        category: parentCat, parentId: cardId,
+      }));
+      state[cardCol].splice(parentIdx + 1, 0, ...newSubs);
+    }
+  } else if (aiPreviewCtx.source === 'modal') {
+    const col = aiPreviewCtx.targetCol || 'todo';
+    [...subtasks].reverse().forEach(taskText => {
+      state[col].unshift({
+        id: uid(), text: taskText,
+        prefix: PREFIXES[Math.floor(Math.random() * PREFIXES.length)],
+        category: aiPreviewCtx.category,
+      });
+    });
+  }
+
+  save(state);
+  renderAll();
+  closeAiPreview();
+});
+
+document.getElementById('ai-reprompt-btn').addEventListener('click', async () => {
+  if (!aiPreviewCtx) return;
+  const instruction = document.getElementById('ai-reprompt-input').value.trim();
+  const btn = document.getElementById('ai-reprompt-btn');
+  btn.innerHTML = `<span class="ai-spin">✨</span>`;
+  btn.disabled = true;
+  try {
+    const subtasks = await callAiBreakdown(aiPreviewCtx.originalTask, instruction);
+    aiPreviewCtx.subtasks = subtasks;
+    document.getElementById('ai-reprompt-input').value = '';
+    renderAiPreviewList();
+  } catch {
+    btn.innerHTML = '⚠️';
+    setTimeout(() => { btn.innerHTML = '🔄 やり直す'; btn.disabled = false; }, 2000);
+    return;
+  }
+  btn.innerHTML = '🔄 やり直す';
+  btn.disabled = false;
+});
+
 document.getElementById('modal-ai-breakdown').addEventListener('click', async () => {
   const text = document.getElementById('modal-input').value.trim();
   if (!text) {
@@ -1727,29 +1921,19 @@ document.getElementById('modal-ai-breakdown').addEventListener('click', async ()
 
   const btn = document.getElementById('modal-ai-breakdown');
   btn.classList.add('loading');
-  btn.innerHTML = `<span class="ai-spin">✨</span> 細分化中…`;
+  btn.innerHTML = `<span class="ai-spin">✨</span> 提案を生成中…`;
 
   try {
-    const res = await fetch(AI_WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task: text }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) throw new Error(res.status);
-    const { subtasks } = await res.json();
-    if (!subtasks?.length) throw new Error('No subtasks');
-
-    // サブタスクをUP NEXTに追加（最初のタスクが一番上＝最優先）
+    const subtasks = await callAiBreakdown(text);
     const col = addTargetCol || 'todo';
-    subtasks.reverse().forEach(taskText => {
-      const prefix = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
-      state[col].unshift({ id: uid(), text: taskText, prefix, category: addCategory });
-    });
-    save(state);
-    renderAll();
     closeAddModal();
-  } catch (err) {
+    showAiPreview(subtasks, {
+      source: 'modal',
+      originalTask: text,
+      targetCol: col,
+      category: addCategory,
+    });
+  } catch {
     btn.classList.remove('loading');
     btn.innerHTML = `⚠️ 失敗しました。もう一度`;
     setTimeout(() => {
