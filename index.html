@@ -414,6 +414,17 @@
     .modal-btn:active { transform:scale(.96); }
     .modal-btn--cancel { background:rgba(255,45,135,.15); color:#FF69B4; border:1.5px solid rgba(255,45,135,.3); }
     .modal-btn--add    { background:linear-gradient(135deg,#FF2D87,#E91E8C); color:#fff; box-shadow:0 4px 20px rgba(255,45,135,.5); }
+    .modal-btn--ai {
+      flex:none; width:100%; margin-top:8px;
+      background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(255,45,135,.2));
+      border:1.5px solid rgba(139,92,246,.45);
+      color:#c4b5fd;
+      display:flex; align-items:center; justify-content:center; gap:6px;
+      font-size:.88rem;
+    }
+    .modal-btn--ai:active { transform:scale(.97); }
+    .modal-btn--ai.loading { opacity:.6; pointer-events:none; }
+    .ai-spin { display:inline-block; animation:spin .7s linear infinite; }
 
     /* ===== FOOTER ===== */
     .footer {
@@ -928,6 +939,9 @@
       <button class="modal-btn modal-btn--cancel" id="modal-cancel">キャンセル</button>
       <button class="modal-btn modal-btn--add"    id="modal-confirm">追加 💖</button>
     </div>
+    <button class="modal-btn modal-btn--ai" id="modal-ai-breakdown">
+      ✨ AIでタスクを細分化して追加
+    </button>
   </div>
 </div>
 
@@ -1576,6 +1590,49 @@ document.getElementById('cat-picker').addEventListener('click', e => {
   addCategory = btn.dataset.cat;
   document.querySelectorAll('.cat-pick-btn').forEach(b =>
     b.classList.toggle('selected', b === btn));
+});
+
+const AI_WORKER_URL = 'https://pinkcity-ai-worker.sweet-summer-fruit-723.workers.dev';
+
+document.getElementById('modal-ai-breakdown').addEventListener('click', async () => {
+  const text = document.getElementById('modal-input').value.trim();
+  if (!text) {
+    document.getElementById('modal-input').focus();
+    return;
+  }
+  if (!addTargetCol && !editCardId) return;
+
+  const btn = document.getElementById('modal-ai-breakdown');
+  btn.classList.add('loading');
+  btn.innerHTML = `<span class="ai-spin">✨</span> 細分化中…`;
+
+  try {
+    const res = await fetch(AI_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: text }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(res.status);
+    const { subtasks } = await res.json();
+    if (!subtasks?.length) throw new Error('No subtasks');
+
+    // サブタスクをUP NEXTに追加（最初のタスクが一番上＝最優先）
+    const col = addTargetCol || 'todo';
+    subtasks.reverse().forEach(taskText => {
+      const prefix = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
+      state[col].unshift({ id: uid(), text: taskText, prefix, category: addCategory });
+    });
+    save(state);
+    renderAll();
+    closeAddModal();
+  } catch (err) {
+    btn.classList.remove('loading');
+    btn.innerHTML = `⚠️ 失敗しました。もう一度`;
+    setTimeout(() => {
+      btn.innerHTML = '✨ AIでタスクを細分化して追加';
+    }, 2500);
+  }
 });
 
 document.getElementById('modal-cancel').addEventListener('click', closeAddModal);
