@@ -309,7 +309,7 @@
       padding:0 0 max(env(safe-area-inset-bottom),20px);
       animation:sheet-in .28s cubic-bezier(.32,0,.15,1);
       box-shadow:0 -8px 48px rgba(233,30,140,.3);
-      overflow:hidden;
+      overflow-y:auto; max-height:90vh;
     }
     .sheet-handle {
       width:40px; height:4px; background:rgba(255,105,180,.35);
@@ -375,6 +375,39 @@
       height:1px; background:rgba(255,45,135,.15);
       margin:4px 16px;
     }
+    /* ===== 既存サブタスクリスト（アクションシート内）===== */
+    .sheet-subs-section {
+      padding:6px 16px 4px;
+      border-top:1px solid rgba(255,45,135,.12);
+      margin-top:2px;
+    }
+    .sheet-subs-label {
+      font-family:'Outfit',sans-serif; font-size:.68rem; font-weight:700;
+      color:rgba(255,105,180,.45); text-transform:uppercase; letter-spacing:.07em;
+      margin-bottom:7px;
+    }
+    .sheet-subs-list {
+      display:flex; flex-direction:column; gap:5px;
+      max-height:30vh; overflow-y:auto; margin-bottom:8px;
+    }
+    .sheet-sub-item {
+      display:flex; align-items:center; gap:6px;
+      background:rgba(255,45,135,.08); border:1px solid rgba(255,45,135,.2);
+      border-radius:10px; padding:7px 6px 7px 12px;
+    }
+    .sheet-sub-input {
+      flex:1; background:transparent; border:none; outline:none;
+      font-family:'Outfit',sans-serif; font-size:.84rem;
+      color:rgba(255,210,235,.9); padding:2px 0;
+    }
+    .sheet-sub-del {
+      flex-shrink:0; background:none; border:none;
+      color:rgba(255,105,180,.38); font-size:.78rem;
+      cursor:pointer; padding:5px 7px;
+      -webkit-tap-highlight-color:transparent; transition:color .15s;
+    }
+    .sheet-sub-del:active { color:#FF2D87; }
+
     /* サブタスク手動追加エリア */
     .sheet-subtask-add {
       display:none; padding:6px 16px 2px; gap:8px; align-items:center;
@@ -1110,14 +1143,19 @@
   <div class="sheet" id="action-sheet">
     <div class="sheet-handle"></div>
     <textarea class="sheet-preview" id="sheet-preview" rows="2" spellcheck="false"></textarea>
-    <div class="sheet-actions" id="sheet-actions"></div>
-    <div class="sheet-subtask-add" id="sheet-subtask-add">
-      <input class="sheet-subtask-input" id="sheet-subtask-input"
-        type="text" placeholder="サブタスクの内容…" maxlength="80" enterkeyhint="done" />
-      <button class="sheet-subtask-confirm" id="sheet-subtask-confirm">＋ 追加</button>
+    <!-- サブタスクセクション（常時表示） -->
+    <div class="sheet-subs-section" id="sheet-subs-section">
+      <p class="sheet-subs-label">📎 サブタスク</p>
+      <div class="sheet-subs-list" id="sheet-subs-list"></div>
+      <div class="sheet-subtask-add visible" id="sheet-subtask-add">
+        <input class="sheet-subtask-input" id="sheet-subtask-input"
+          type="text" placeholder="サブタスクを追加…" maxlength="80" enterkeyhint="done" />
+        <button class="sheet-subtask-confirm" id="sheet-subtask-confirm">＋</button>
+      </div>
+      <div class="sheet-draft-list" id="sheet-draft-list"></div>
+      <button class="sheet-draft-commit" id="sheet-draft-commit">確定する 💖</button>
     </div>
-    <div class="sheet-draft-list" id="sheet-draft-list"></div>
-    <button class="sheet-draft-commit" id="sheet-draft-commit">確定する 💖</button>
+    <div class="sheet-actions" id="sheet-actions"></div>
     <div class="sheet-divider"></div>
     <button class="sheet-action--cancel" id="sheet-cancel">キャンセル</button>
   </div>
@@ -1757,17 +1795,8 @@ function openActionSheet(cardId, colId) {
   });
   container.appendChild(aiBtn);
 
-  // 手動サブタスク追加ボタン
-  const addSubBtn = document.createElement('button');
-  addSubBtn.className = 'sheet-action sheet-action--move';
-  addSubBtn.id = 'sheet-add-subtask-btn';
-  addSubBtn.innerHTML = `<span>＋</span><span>サブタスクを追加</span>`;
-  addSubBtn.addEventListener('click', () => {
-    document.getElementById('sheet-subtask-add').classList.add('visible');
-    addSubBtn.style.display = 'none';
-    setTimeout(() => document.getElementById('sheet-subtask-input').focus(), 80);
-  });
-  container.appendChild(addSubBtn);
+  // サブタスクセクションを描画
+  renderSheetSubs(colId, cardId);
 
   // Toggle category
   const found2 = state[colId].find(c => c.id === cardId);
@@ -1824,6 +1853,42 @@ function openActionSheet(cardId, colId) {
   document.getElementById('action-overlay').classList.add('open');
 }
 
+function renderSheetSubs(colId, parentId) {
+  const list = document.getElementById('sheet-subs-list');
+  list.innerHTML = '';
+  const subs = state[colId].filter(c => c.parentId === parentId);
+  subs.forEach(sub => {
+    const item = document.createElement('div');
+    item.className = 'sheet-sub-item';
+
+    const inp = document.createElement('input');
+    inp.className = 'sheet-sub-input';
+    inp.value = sub.text;
+    inp.addEventListener('blur', () => {
+      const newText = inp.value.trim();
+      if (newText && newText !== sub.text) {
+        sub.text = newText;
+        save(state);
+        renderAll();
+      }
+    });
+
+    const del = document.createElement('button');
+    del.className = 'sheet-sub-del';
+    del.textContent = '✕';
+    del.addEventListener('click', () => {
+      state[colId] = state[colId].filter(c => c.id !== sub.id);
+      save(state);
+      renderAll();
+      renderSheetSubs(colId, parentId);
+    });
+
+    item.appendChild(inp);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
 function closeSheet() {
   // テキストが変更されていれば保存
   if (sheetCardId && sheetColId) {
@@ -1836,8 +1901,8 @@ function closeSheet() {
     }
   }
   document.getElementById('action-overlay').classList.remove('open');
-  document.getElementById('sheet-subtask-add').classList.remove('visible');
   document.getElementById('sheet-subtask-input').value = '';
+  document.getElementById('sheet-subs-list').innerHTML = '';
   draftSubtasks = [];
   renderDraftSubtasks();
   sheetCardId = null; sheetColId = null; deleteConfirm = false;
@@ -1919,17 +1984,18 @@ function commitDraftSubtasks() {
   save(state);
   renderAll();
   draftSubtasks = [];
-  closeSheet();
+  renderDraftSubtasks();
+  document.getElementById('sheet-subtask-input').value = '';
+  renderSheetSubs(col, parentId);
 }
+
 
 document.getElementById('sheet-subtask-confirm').addEventListener('click', addToDraft);
 document.getElementById('sheet-draft-commit').addEventListener('click', commitDraftSubtasks);
 document.getElementById('sheet-subtask-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); addToDraft(); }
   if (e.key === 'Escape') {
-    document.getElementById('sheet-subtask-add').classList.remove('visible');
-    const btn = document.getElementById('sheet-add-subtask-btn');
-    if (btn) btn.style.display = '';
+    document.getElementById('sheet-subtask-input').value = '';
   }
 });
 
