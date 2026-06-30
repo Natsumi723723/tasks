@@ -484,6 +484,20 @@
     }
     .modal-btn--ai:active { transform:scale(.97); }
     .modal-btn--ai.loading { opacity:.6; pointer-events:none; }
+    /* 重要トグル */
+    .imp-toggle {
+      width:100%; margin-bottom:10px;
+      background:rgba(255,45,135,.08); border:1.5px solid rgba(255,45,135,.22);
+      color:rgba(255,105,180,.65); border-radius:10px;
+      font-family:'Outfit',sans-serif; font-size:.88rem; font-weight:700;
+      padding:11px; cursor:pointer; transition:all .18s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .imp-toggle.active {
+      background:linear-gradient(135deg,#220019,#300025);
+      border-color:#FF2D87; color:#FF2D87;
+      box-shadow:0 2px 14px rgba(255,45,135,.3);
+    }
     .ai-spin { display:inline-block; animation:spin .7s linear infinite; }
 
     /* ===== AI PREVIEW PANEL ===== */
@@ -809,7 +823,7 @@
     .card--important {
       border:2.5px solid transparent !important;
       background:
-        linear-gradient(135deg,rgba(255,255,255,.97),rgba(255,220,240,.93)) padding-box,
+        linear-gradient(135deg,#220019,#300025) padding-box,
         linear-gradient(90deg,#FF2D87,#FFB0D8,#FFD1EC,#FF69B4,#E91E8C,#FF2D87,#FFB0D8) border-box !important;
       background-size:100% 100%, 300% auto !important;
       animation:imp-shimmer 3s linear infinite;
@@ -1152,6 +1166,7 @@
       <button class="cat-pick-btn cat-pick-btn--pinkcity selected" data-cat="pinkcity">💖 PINK CITY</button>
       <button class="cat-pick-btn cat-pick-btn--private"           data-cat="private">🔒 プライベート</button>
     </div>
+    <button class="imp-toggle" id="imp-toggle">💖 重要タスクにする</button>
     <input class="modal-input" id="modal-input" type="text" placeholder="タスク内容を入力…" maxlength="80" enterkeyhint="done" />
     <div class="modal-actions">
       <button class="modal-btn modal-btn--cancel" id="modal-cancel">キャンセル</button>
@@ -1945,6 +1960,11 @@ function openAddModal(colId) {
 
   document.getElementById('modal-title').textContent = '✨ ' + COL_LABEL[colId] + ' に追加';
   document.getElementById('cat-picker').style.display = '';
+  addImportant = false;
+  const impTgl = document.getElementById('imp-toggle');
+  impTgl.classList.remove('active');
+  impTgl.innerHTML = '💖 重要タスクにする';
+  impTgl.style.display = '';
 
   const picker = document.getElementById('cat-picker');
   picker.querySelectorAll('.cat-pick-btn').forEach(b => {
@@ -1967,7 +1987,8 @@ function openEditModal(cardId, colId) {
   addTargetCol = null;
 
   document.getElementById('modal-title').textContent = '✏️ 編集する';
-  document.getElementById('cat-picker').style.display = 'none'; // 編集時はカテゴリ変更不要
+  document.getElementById('cat-picker').style.display = 'none';
+  document.getElementById('imp-toggle').style.display = 'none';
 
   const inp = document.getElementById('modal-input');
   inp.value = card.text;
@@ -1996,9 +2017,20 @@ function confirmAdd() {
   // 追加モード
   if (!addTargetCol) return;
   const prefix = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
-  state[addTargetCol].unshift({ id:uid(), text, prefix, category: addCategory });
+  const newCard = { id:uid(), text, prefix, category: addCategory };
+  if (addImportant) newCard.important = true;
+  state[addTargetCol].unshift(newCard);
   save(state); renderAll(); closeAddModal();
 }
+
+// 重要トグル
+let addImportant = false;
+document.getElementById('imp-toggle').addEventListener('click', () => {
+  addImportant = !addImportant;
+  const btn = document.getElementById('imp-toggle');
+  btn.classList.toggle('active', addImportant);
+  btn.innerHTML = addImportant ? '💖 重要タスクに設定！' : '💖 重要タスクにする';
+});
 
 // カテゴリピッカーのクリック
 document.getElementById('cat-picker').addEventListener('click', e => {
