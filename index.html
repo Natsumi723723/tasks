@@ -370,6 +370,30 @@
       height:1px; background:rgba(255,45,135,.15);
       margin:4px 16px;
     }
+    /* サブタスク手動追加行 */
+    .sheet-subtask-add {
+      display:none; padding:6px 16px 2px; gap:8px; align-items:center;
+    }
+    .sheet-subtask-add.visible { display:flex; }
+    .sheet-subtask-input {
+      flex:1; background:rgba(255,45,135,.1);
+      border:1.5px solid rgba(255,45,135,.35); border-radius:12px;
+      color:#fff; font-family:'Outfit',sans-serif; font-size:.88rem;
+      padding:11px 14px; outline:none;
+      -webkit-appearance:none;
+    }
+    .sheet-subtask-input::placeholder { color:rgba(255,150,200,.4); }
+    .sheet-subtask-input:focus { border-color:rgba(255,45,135,.65); }
+    .sheet-subtask-confirm {
+      flex-shrink:0;
+      background:linear-gradient(135deg,#FF2D87,#E91E8C); border:none;
+      color:#fff; border-radius:12px;
+      font-family:'Outfit',sans-serif; font-size:.85rem; font-weight:800;
+      padding:11px 16px; cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .sheet-subtask-confirm:active { transform:scale(.96); }
+
     .sheet-action--cancel {
       background:transparent; border:none;
       color:rgba(255,105,180,.6);
@@ -1018,6 +1042,11 @@
     <div class="sheet-handle"></div>
     <textarea class="sheet-preview" id="sheet-preview" rows="2" spellcheck="false"></textarea>
     <div class="sheet-actions" id="sheet-actions"></div>
+    <div class="sheet-subtask-add" id="sheet-subtask-add">
+      <input class="sheet-subtask-input" id="sheet-subtask-input"
+        type="text" placeholder="サブタスクの内容…" maxlength="80" enterkeyhint="done" />
+      <button class="sheet-subtask-confirm" id="sheet-subtask-confirm">追加</button>
+    </div>
     <div class="sheet-divider"></div>
     <button class="sheet-action--cancel" id="sheet-cancel">キャンセル</button>
   </div>
@@ -1609,6 +1638,18 @@ function openActionSheet(cardId, colId) {
   });
   container.appendChild(aiBtn);
 
+  // 手動サブタスク追加ボタン
+  const addSubBtn = document.createElement('button');
+  addSubBtn.className = 'sheet-action sheet-action--move';
+  addSubBtn.id = 'sheet-add-subtask-btn';
+  addSubBtn.innerHTML = `<span>＋</span><span>サブタスクを追加</span>`;
+  addSubBtn.addEventListener('click', () => {
+    document.getElementById('sheet-subtask-add').classList.add('visible');
+    addSubBtn.style.display = 'none';
+    setTimeout(() => document.getElementById('sheet-subtask-input').focus(), 80);
+  });
+  container.appendChild(addSubBtn);
+
   // Toggle category
   const found2 = state[colId].find(c => c.id === cardId);
   if (found2) {
@@ -1659,12 +1700,61 @@ function closeSheet() {
     }
   }
   document.getElementById('action-overlay').classList.remove('open');
+  document.getElementById('sheet-subtask-add').classList.remove('visible');
+  document.getElementById('sheet-subtask-input').value = '';
   sheetCardId = null; sheetColId = null; deleteConfirm = false;
 }
 
 document.getElementById('sheet-cancel').addEventListener('click', closeSheet);
 document.getElementById('action-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('action-overlay')) closeSheet();
+});
+
+// 手動サブタスク確定
+function confirmSubtaskAdd() {
+  const text = document.getElementById('sheet-subtask-input').value.trim();
+  if (!text || !sheetCardId || !sheetColId) return;
+
+  const col = sheetColId;
+  const parentId = sheetCardId;
+  const parentIdx = state[col].findIndex(c => c.id === parentId);
+  if (parentIdx === -1) return;
+
+  // 親のテキスト変更も即保存
+  const newParentText = document.getElementById('sheet-preview').value.trim();
+  if (newParentText && newParentText !== state[col][parentIdx].text) {
+    state[col][parentIdx].text = newParentText;
+  }
+  state[col][parentIdx].hasSubtasks = true;
+  const parentCat = state[col][parentIdx].category || 'pinkcity';
+
+  // 既存のサブタスク群の末尾の後ろに挿入
+  let insertIdx = parentIdx + 1;
+  while (insertIdx < state[col].length && state[col][insertIdx].parentId === parentId) {
+    insertIdx++;
+  }
+  state[col].splice(insertIdx, 0, {
+    id: uid(), text,
+    prefix: PREFIXES[Math.floor(Math.random() * PREFIXES.length)],
+    category: parentCat,
+    parentId,
+  });
+
+  save(state);
+  renderAll();
+  // 入力欄をリセットして続けて追加できるように
+  document.getElementById('sheet-subtask-input').value = '';
+  document.getElementById('sheet-subtask-input').focus();
+}
+
+document.getElementById('sheet-subtask-confirm').addEventListener('click', confirmSubtaskAdd);
+document.getElementById('sheet-subtask-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); confirmSubtaskAdd(); }
+  if (e.key === 'Escape') {
+    document.getElementById('sheet-subtask-add').classList.remove('visible');
+    const btn = document.getElementById('sheet-add-subtask-btn');
+    if (btn) btn.style.display = '';
+  }
 });
 
 /* ============================================================
