@@ -805,19 +805,23 @@
       background:rgba(255,45,135,.35);
     }
     .card--subtask:last-child { margin-bottom:0; }
-    /* 重要タスク — シマーグラデーション枠線 */
+    /* 重要タスク — 黒背景 × ピンク文字 × シマーボーダー */
     .card--important {
       border:2.5px solid transparent !important;
       background:
-        linear-gradient(135deg,rgba(255,255,255,.99),rgba(255,215,240,.94)) padding-box,
+        linear-gradient(135deg,#0d0009,#1c0016) padding-box,
         linear-gradient(90deg,#FF2D87,#FFB0D8,#FFD1EC,#FF69B4,#E91E8C,#FF2D87,#FFB0D8) border-box !important;
       background-size:100% 100%, 300% auto !important;
       animation:imp-shimmer 3s linear infinite;
-      box-shadow:0 3px 22px rgba(255,45,135,.22) !important;
+      box-shadow:0 4px 28px rgba(255,45,135,.35) !important;
+      color:#FFB0D8 !important;
     }
+    .card--important .card-text  { color:#fff !important; font-weight:700; }
+    .card--important .card-prefix { filter:drop-shadow(0 0 4px rgba(255,45,135,.6)); }
+    .card--important .card-done-btn { color:rgba(255,105,180,.7) !important; }
     .card-important-mark {
       flex-shrink:0; font-size:.78rem; line-height:1; margin-right:1px;
-      filter:drop-shadow(0 0 3px rgba(255,45,135,.7));
+      filter:drop-shadow(0 0 4px rgba(255,45,135,.9));
     }
     /* 親カードのサブタスクバッジ */
     .card-subtask-badge {
