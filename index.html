@@ -370,7 +370,7 @@
       height:1px; background:rgba(255,45,135,.15);
       margin:4px 16px;
     }
-    /* サブタスク手動追加行 */
+    /* サブタスク手動追加エリア */
     .sheet-subtask-add {
       display:none; padding:6px 16px 2px; gap:8px; align-items:center;
     }
@@ -386,13 +386,45 @@
     .sheet-subtask-input:focus { border-color:rgba(255,45,135,.65); }
     .sheet-subtask-confirm {
       flex-shrink:0;
-      background:linear-gradient(135deg,#FF2D87,#E91E8C); border:none;
+      background:rgba(255,45,135,.2); border:1.5px solid rgba(255,45,135,.4);
       color:#fff; border-radius:12px;
       font-family:'Outfit',sans-serif; font-size:.85rem; font-weight:800;
       padding:11px 16px; cursor:pointer;
       -webkit-tap-highlight-color:transparent;
     }
     .sheet-subtask-confirm:active { transform:scale(.96); }
+    /* ドラフトリスト */
+    .sheet-draft-list {
+      padding:4px 16px 0; display:flex; flex-direction:column; gap:5px;
+      max-height:44vw; overflow-y:auto;
+    }
+    .sheet-draft-item {
+      display:flex; align-items:center; gap:6px;
+      background:rgba(255,45,135,.09); border:1px solid rgba(255,45,135,.22);
+      border-radius:10px; padding:8px 8px 8px 13px;
+      font-family:'Outfit',sans-serif; font-size:.84rem;
+      color:rgba(255,210,235,.9);
+    }
+    .sheet-draft-text { flex:1; }
+    .sheet-draft-del {
+      flex-shrink:0; background:none; border:none;
+      color:rgba(255,105,180,.45); font-size:.78rem;
+      cursor:pointer; padding:4px 7px;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .sheet-draft-del:active { color:#FF2D87; }
+    /* 確定ボタン */
+    .sheet-draft-commit {
+      display:none; width:calc(100% - 32px); margin:8px 16px 0;
+      background:linear-gradient(135deg,#FF2D87,#E91E8C); border:none;
+      color:#fff; border-radius:14px;
+      font-family:'Outfit',sans-serif; font-size:.9rem; font-weight:800;
+      padding:14px; cursor:pointer;
+      box-shadow:0 4px 18px rgba(255,45,135,.45);
+      -webkit-tap-highlight-color:transparent;
+    }
+    .sheet-draft-commit.has-items { display:block; }
+    .sheet-draft-commit:active { transform:scale(.97); }
 
     .sheet-action--cancel {
       background:transparent; border:none;
@@ -1045,8 +1077,10 @@
     <div class="sheet-subtask-add" id="sheet-subtask-add">
       <input class="sheet-subtask-input" id="sheet-subtask-input"
         type="text" placeholder="サブタスクの内容…" maxlength="80" enterkeyhint="done" />
-      <button class="sheet-subtask-confirm" id="sheet-subtask-confirm">追加</button>
+      <button class="sheet-subtask-confirm" id="sheet-subtask-confirm">＋ 追加</button>
     </div>
+    <div class="sheet-draft-list" id="sheet-draft-list"></div>
+    <button class="sheet-draft-commit" id="sheet-draft-commit">確定する 💖</button>
     <div class="sheet-divider"></div>
     <button class="sheet-action--cancel" id="sheet-cancel">キャンセル</button>
   </div>
@@ -1702,6 +1736,8 @@ function closeSheet() {
   document.getElementById('action-overlay').classList.remove('open');
   document.getElementById('sheet-subtask-add').classList.remove('visible');
   document.getElementById('sheet-subtask-input').value = '';
+  draftSubtasks = [];
+  renderDraftSubtasks();
   sheetCardId = null; sheetColId = null; deleteConfirm = false;
 }
 
@@ -1710,17 +1746,51 @@ document.getElementById('action-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('action-overlay')) closeSheet();
 });
 
-// 手動サブタスク確定
-function confirmSubtaskAdd() {
+// ドラフトサブタスク管理
+let draftSubtasks = [];
+
+function renderDraftSubtasks() {
+  const list = document.getElementById('sheet-draft-list');
+  const commitBtn = document.getElementById('sheet-draft-commit');
+  list.innerHTML = '';
+  draftSubtasks.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'sheet-draft-item';
+    const span = document.createElement('span');
+    span.className = 'sheet-draft-text';
+    span.textContent = item.text;
+    const del = document.createElement('button');
+    del.className = 'sheet-draft-del';
+    del.textContent = '✕';
+    del.addEventListener('click', () => {
+      draftSubtasks.splice(i, 1);
+      renderDraftSubtasks();
+    });
+    el.appendChild(span);
+    el.appendChild(del);
+    list.appendChild(el);
+  });
+  commitBtn.classList.toggle('has-items', draftSubtasks.length > 0);
+}
+
+function addToDraft() {
   const text = document.getElementById('sheet-subtask-input').value.trim();
-  if (!text || !sheetCardId || !sheetColId) return;
+  if (!text) return;
+  draftSubtasks.push({ text });
+  document.getElementById('sheet-subtask-input').value = '';
+  document.getElementById('sheet-subtask-input').focus();
+  renderDraftSubtasks();
+}
+
+function commitDraftSubtasks() {
+  if (!draftSubtasks.length || !sheetCardId || !sheetColId) return;
 
   const col = sheetColId;
   const parentId = sheetCardId;
   const parentIdx = state[col].findIndex(c => c.id === parentId);
   if (parentIdx === -1) return;
 
-  // 親のテキスト変更も即保存
+  // 親のテキスト変更も保存
   const newParentText = document.getElementById('sheet-preview').value.trim();
   if (newParentText && newParentText !== state[col][parentIdx].text) {
     state[col][parentIdx].text = newParentText;
@@ -1728,28 +1798,30 @@ function confirmSubtaskAdd() {
   state[col][parentIdx].hasSubtasks = true;
   const parentCat = state[col][parentIdx].category || 'pinkcity';
 
-  // 既存のサブタスク群の末尾の後ろに挿入
+  // 既存サブタスク群の末尾の後ろから挿入
   let insertIdx = parentIdx + 1;
   while (insertIdx < state[col].length && state[col][insertIdx].parentId === parentId) {
     insertIdx++;
   }
-  state[col].splice(insertIdx, 0, {
-    id: uid(), text,
-    prefix: PREFIXES[Math.floor(Math.random() * PREFIXES.length)],
-    category: parentCat,
-    parentId,
+  draftSubtasks.forEach(item => {
+    state[col].splice(insertIdx, 0, {
+      id: uid(), text: item.text,
+      prefix: PREFIXES[Math.floor(Math.random() * PREFIXES.length)],
+      category: parentCat, parentId,
+    });
+    insertIdx++;
   });
 
   save(state);
   renderAll();
-  // 入力欄をリセットして続けて追加できるように
-  document.getElementById('sheet-subtask-input').value = '';
-  document.getElementById('sheet-subtask-input').focus();
+  draftSubtasks = [];
+  closeSheet();
 }
 
-document.getElementById('sheet-subtask-confirm').addEventListener('click', confirmSubtaskAdd);
+document.getElementById('sheet-subtask-confirm').addEventListener('click', addToDraft);
+document.getElementById('sheet-draft-commit').addEventListener('click', commitDraftSubtasks);
 document.getElementById('sheet-subtask-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); confirmSubtaskAdd(); }
+  if (e.key === 'Enter') { e.preventDefault(); addToDraft(); }
   if (e.key === 'Escape') {
     document.getElementById('sheet-subtask-add').classList.remove('visible');
     const btn = document.getElementById('sheet-add-subtask-btn');
