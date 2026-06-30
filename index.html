@@ -835,11 +835,11 @@
       border-radius:1px;
     }
     .card--subtask {
-      font-size:.84rem;
-      border-left-color:rgba(255,150,200,.6);
-      background:linear-gradient(135deg,rgba(255,255,255,.93),rgba(255,235,248,.88)) !important;
-      margin-bottom:6px;
-      position:relative;
+      font-size:.83rem;
+      border-left:3px dashed rgba(255,120,180,.55) !important;
+      background:linear-gradient(135deg,rgba(255,255,255,.88),rgba(255,228,244,.84)) !important;
+      margin-bottom:6px; position:relative;
+      opacity:.93;
     }
     /* 横線コネクター */
     .card--subtask::before {
@@ -848,9 +848,24 @@
       left:-9px; top:50%;
       transform:translateY(-50%);
       width:8px; height:1.5px;
-      background:rgba(255,45,135,.35);
+      background:rgba(255,45,135,.4);
     }
     .card--subtask:last-child { margin-bottom:0; }
+    /* サブタスク ↳ マーカー */
+    .card-sub-arrow {
+      flex-shrink:0; font-size:.82rem; font-weight:900;
+      color:rgba(255,105,180,.65); line-height:1;
+    }
+    /* DONEストリップ内 親タスク名ラベル */
+    .sub-parent-label {
+      display:flex; align-items:baseline; gap:5px; flex-wrap:wrap;
+      padding:8px 4px 3px;
+      font-family:'Outfit',sans-serif; font-size:.68rem; font-weight:700;
+      color:rgba(255,105,180,.5); letter-spacing:.03em;
+    }
+    .sub-parent-label-text {
+      color:rgba(255,180,220,.8); font-size:.78rem; font-weight:800;
+    }
     /* 重要タスク — 黒背景 × ピンク文字 × シマーボーダー */
     .card--important {
       border:2.5px solid transparent !important;
@@ -1569,6 +1584,20 @@ function renderDoneStrip() {
   const rendered = new Set();
   roots.forEach(card => {
     if (rendered.has(card.id)) return;
+
+    // 孤立サブタスク（親が DONE にない）→ 親タスク名をラベル表示
+    if (card.parentId) {
+      const parent = ['todo','inprog','done'].reduce(
+        (f, col) => f || state[col].find(c => c.id === card.parentId), null
+      );
+      if (parent) {
+        const lbl = document.createElement('div');
+        lbl.className = 'sub-parent-label';
+        lbl.innerHTML = `<span>📎 親:</span><span class="sub-parent-label-text">${escHtml(parent.text)}</span>`;
+        inner.appendChild(lbl);
+      }
+    }
+
     rendered.add(card.id);
     inner.appendChild(makeCardEl(card, 'done'));
     const subs = visible.filter(c => c.parentId === card.id);
@@ -1716,11 +1745,14 @@ function makeCardEl(card, colId) {
 
   const importantMark = card.important
     ? `<span class="card-important-mark">💖</span>` : '';
+  const subArrow = card.parentId
+    ? `<span class="card-sub-arrow">↳</span>` : '';
 
   el.innerHTML = `
     ${nextLabel ? `<div class="swipe-hint swipe-hint--right" aria-hidden="true">${nextLabel} ▶</div>` : ''}
     ${prevLabel ? `<div class="swipe-hint swipe-hint--left"  aria-hidden="true">◀ ${prevLabel}</div>` : ''}
     ${importantMark}
+    ${subArrow}
     <span class="card-prefix">${card.prefix}</span>
     <span class="card-text">${escHtml(card.text)}</span>
     ${subtaskBadge}
