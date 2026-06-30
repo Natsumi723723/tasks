@@ -2200,7 +2200,6 @@ document.getElementById('modal-ai-breakdown').addEventListener('click', async ()
 document.getElementById('modal-cancel').addEventListener('click', closeAddModal);
 document.getElementById('modal-confirm').addEventListener('click', confirmAdd);
 document.getElementById('modal-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') confirmAdd();
   if (e.key === 'Escape') closeAddModal();
 });
 document.getElementById('add-overlay').addEventListener('click', e => {
