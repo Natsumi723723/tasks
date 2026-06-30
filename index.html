@@ -15,6 +15,10 @@
       0%   { background-position: -400% center; }
       100% { background-position:  400% center; }
     }
+    @keyframes imp-shimmer {
+      0%   { background-position: 0 0, -400% center; }
+      100% { background-position: 0 0,  400% center; }
+    }
     @keyframes float1 {
       0%,100% { transform: translateY(0px) rotate(0deg);    opacity:.6; }
       50%     { transform: translateY(-30px) rotate(180deg); opacity:1; }
@@ -801,19 +805,18 @@
       background:rgba(255,45,135,.35);
     }
     .card--subtask:last-child { margin-bottom:0; }
-    /* 重要タスク */
+    /* 重要タスク — シマーグラデーション枠線 */
     .card--important {
-      border-left:7px solid #FF2D87 !important;
-      box-shadow:
-        -1px 0 14px rgba(255,45,135,.55),
-        0 4px 20px rgba(255,45,135,.18) !important;
-      background:linear-gradient(135deg,rgba(255,255,255,.99),rgba(255,215,240,.94)) !important;
+      border:2.5px solid transparent !important;
+      background:
+        linear-gradient(135deg,rgba(255,255,255,.99),rgba(255,215,240,.94)) padding-box,
+        linear-gradient(90deg,#FF2D87,#FFB0D8,#FFD1EC,#FF69B4,#E91E8C,#FF2D87,#FFB0D8) border-box !important;
+      background-size:100% 100%, 300% auto !important;
+      animation:imp-shimmer 3s linear infinite;
+      box-shadow:0 3px 22px rgba(255,45,135,.22) !important;
     }
     .card-important-mark {
-      flex-shrink:0;
-      font-size:.78rem;
-      line-height:1;
-      margin-right:1px;
+      flex-shrink:0; font-size:.78rem; line-height:1; margin-right:1px;
       filter:drop-shadow(0 0 3px rgba(255,45,135,.7));
     }
     /* 親カードのサブタスクバッジ */
