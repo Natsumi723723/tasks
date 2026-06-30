@@ -170,10 +170,8 @@
     .col-cards::-webkit-scrollbar { width: 4px; }
     .col-cards::-webkit-scrollbar-track { background: transparent; }
     .col-cards::-webkit-scrollbar-thumb { background: rgba(255,45,135,.35); border-radius: 2px; }
-    @media (min-width:681px) {
-      .column { max-height: none; height: auto; }
-      .col-cards { overflow-y: visible; flex: none; }
-    }
+    .column { height: auto; }
+    .col-cards { overflow-y: visible; flex: none; }
     .column.drag-over {
       background:rgba(255,45,135,.15);
       box-shadow:0 0 0 2px rgba(255,45,135,.55), 0 12px 48px rgba(233,30,140,.35), inset 0 1px 0 rgba(255,182,220,.25);
@@ -956,33 +954,25 @@
       background:rgba(139,92,246,.25); border-color:#8b5cf6; color:#fff;
     }
 
-    /* ===== RESPONSIVE ===== */
+    /* inprog / done はボードから外してストリップで表示 */
+    .column--inprog { display:none !important; }
+    .column--done   { display:none !important; }
     @media (max-width:680px) {
-      .board {
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        grid-template-areas:"todo done";
-        padding:0 12px;
-        gap:10px;
-      }
-      .column--todo  { grid-area:todo; }
-      .column--done  { grid-area:done; }
-      /* inprog はボードから外してストリップとして表示 */
-      .column--inprog { display:none; }
+      .board { padding:0 12px; }
     }
 
-    /* ===== ON HOLD STRIP (モバイル専用) ===== */
-    .onhold-strip {
-      display:none; /* JSで表示切り替え */
+    /* ===== COLUMN STRIPS (ON HOLD / DONE) ===== */
+    .onhold-strip, .done-strip {
       align-self:stretch;
       box-sizing:border-box;
-      padding:0 12px 10px;
+      padding:0 16px 10px;
       position:relative; z-index:2;
+      max-width:860px; width:100%;
     }
     @media (max-width:680px) {
-      .onhold-strip { display:block; }
+      .onhold-strip, .done-strip { padding:0 12px 10px; }
     }
-    .onhold-toggle {
+    .onhold-toggle, .done-toggle {
       width:100%;
       display:flex; align-items:center; justify-content:space-between;
       padding:10px 16px;
@@ -995,27 +985,33 @@
       -webkit-tap-highlight-color:transparent;
       transition:background .18s, border-color .18s;
     }
+    .done-toggle {
+      background:rgba(192,0,122,.07);
+      border-color:rgba(192,0,122,.22);
+      color:rgba(255,105,180,.7);
+    }
     .onhold-toggle:active { background:rgba(255,45,135,.18); }
-    .onhold-toggle-left { display:flex; align-items:center; gap:7px; }
-    .onhold-count-badge {
+    .done-toggle:active   { background:rgba(192,0,122,.16); }
+    .onhold-toggle-left, .done-toggle-left { display:flex; align-items:center; gap:7px; }
+    .onhold-count-badge, .done-count-badge {
       background:rgba(255,45,135,.25); color:#FF2D87;
       border-radius:999px; padding:1px 8px;
       font-size:.72rem; font-weight:900;
     }
-    .onhold-arrow {
+    .done-count-badge { background:rgba(192,0,122,.2); color:#c0007a; }
+    .onhold-arrow, .done-arrow {
       font-size:.8rem; opacity:.7;
       transition:transform .25s cubic-bezier(.34,1.56,.64,1);
     }
-    .onhold-strip.open .onhold-arrow { transform:rotate(180deg); }
-    .onhold-body {
-      overflow:hidden;
-      max-height:0;
-      transition:max-height .3s cubic-bezier(.4,0,.2,1);
+    .onhold-strip.open .onhold-arrow,
+    .done-strip.open   .done-arrow   { transform:rotate(180deg); }
+    .onhold-body, .done-body {
+      overflow:hidden; max-height:0;
+      transition:max-height .35s cubic-bezier(.4,0,.2,1);
     }
-    .onhold-strip.open .onhold-body { max-height:600px; }
-    .onhold-inner {
-      padding-top:10px;
-    }
+    .onhold-strip.open .onhold-body { max-height:2000px; }
+    .done-strip.open   .done-body   { max-height:2000px; }
+    .onhold-inner, .done-inner { padding-top:10px; }
 
     /* ===== SYNC STATUS ===== */
     .sync-pill {
@@ -1130,9 +1126,23 @@
 
 <main class="board" role="main">
   <section class="column column--todo"   id="col-todo"   aria-label="UP NEXT"></section>
-  <section class="column column--inprog" id="col-inprog" aria-label="ON HOLD"></section>
-  <section class="column column--done"   id="col-done"   aria-label="DONE"></section>
+  <section class="column column--inprog" id="col-inprog" aria-label="ON HOLD" aria-hidden="true"></section>
+  <section class="column column--done"   id="col-done"   aria-label="DONE"    aria-hidden="true"></section>
 </main>
+
+<!-- DONE strip -->
+<div class="done-strip" id="done-strip">
+  <button class="done-toggle" id="done-toggle" aria-expanded="false">
+    <span class="done-toggle-left">
+      <span>DONE ✨</span>
+      <span class="done-count-badge" id="done-badge">0</span>
+    </span>
+    <span class="done-arrow">▼</span>
+  </button>
+  <div class="done-body" id="done-body">
+    <div class="done-inner" id="done-inner"></div>
+  </div>
+</div>
 
 <footer class="footer">💖 PINK CITY PROJECT 💖</footer>
 
@@ -1497,7 +1507,8 @@ function isMobile() { return window.innerWidth <= 680; }
 function renderAll() {
   COL_ORDER.forEach(renderColumn);
   updateFilterCounts();
-  if (isMobile()) renderOnHoldStrip();
+  renderOnHoldStrip();
+  renderDoneStrip();
 }
 
 /* ON HOLD ストリップ（モバイル専用） */
@@ -1543,6 +1554,41 @@ function renderOnHoldStrip() {
     }
   });
 }
+
+/* DONE ストリップ */
+function renderDoneStrip() {
+  const visible = currentFilter === 'all'
+    ? state.done
+    : state.done.filter(c => (c.category || 'pinkcity') === currentFilter);
+
+  document.getElementById('done-badge').textContent = visible.length;
+
+  const inner = document.getElementById('done-inner');
+  inner.innerHTML = '';
+
+  const isRoot = c => !c.parentId || !visible.find(p => p.id === c.parentId);
+  const roots = visible.filter(isRoot);
+  const rendered = new Set();
+  roots.forEach(card => {
+    if (rendered.has(card.id)) return;
+    rendered.add(card.id);
+    inner.appendChild(makeCardEl(card, 'done'));
+    const subs = visible.filter(c => c.parentId === card.id);
+    if (subs.length > 0) {
+      const grp = document.createElement('div');
+      grp.className = 'subtask-group';
+      subs.forEach(sub => { rendered.add(sub.id); grp.appendChild(makeCardEl(sub, 'done')); });
+      inner.appendChild(grp);
+    }
+  });
+}
+
+document.getElementById('done-toggle').addEventListener('click', () => {
+  const strip = document.getElementById('done-strip');
+  const isOpen = strip.classList.toggle('open');
+  document.getElementById('done-toggle').setAttribute('aria-expanded', isOpen);
+  if (navigator.vibrate) navigator.vibrate(8);
+});
 
 document.getElementById('onhold-toggle').addEventListener('click', () => {
   const strip = document.getElementById('onhold-strip');
