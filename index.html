@@ -1851,12 +1851,14 @@ function renderDraftSubtasks() {
 }
 
 function addToDraft() {
-  const text = document.getElementById('sheet-subtask-input').value.trim();
+  const input = document.getElementById('sheet-subtask-input');
+  const text = input.value.trim();
   if (!text) return;
   draftSubtasks.push({ text });
-  document.getElementById('sheet-subtask-input').value = '';
-  document.getElementById('sheet-subtask-input').focus();
+  input.value = '';
   renderDraftSubtasks();
+  input.focus();
+  setTimeout(() => { input.value = ''; }, 30); // iOS Safari text-restore workaround
 }
 
 function commitDraftSubtasks() {
