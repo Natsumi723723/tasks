@@ -801,6 +801,18 @@
       background:rgba(255,45,135,.35);
     }
     .card--subtask:last-child { margin-bottom:0; }
+    /* 重要タスク */
+    .card--important {
+      border-color:rgba(255,45,135,.75) !important;
+      box-shadow:0 0 0 1.5px rgba(255,45,135,.25), 0 4px 20px rgba(255,45,135,.22) !important;
+      background:linear-gradient(135deg,rgba(255,255,255,.99),rgba(255,218,242,.93)) !important;
+    }
+    .card--important::after {
+      content:'💖';
+      position:absolute; top:-7px; right:9px;
+      font-size:.82rem;
+      filter:drop-shadow(0 0 5px rgba(255,45,135,.65));
+    }
     /* 親カードのサブタスクバッジ */
     .card-subtask-badge {
       flex-shrink:0;
@@ -1474,11 +1486,28 @@ function renderColumn(colId) {
   cards.className = 'col-cards';
   cards.id = 'cards-' + colId;
 
-  // 親カード → サブタスクの順にグループ表示
+  // ルートカード（parentIdなし or 親が見えない）を重要→通常の順にソート
+  const isRoot = c => !c.parentId || !visible.find(p => p.id === c.parentId);
+  const roots = visible.filter(isRoot);
+  const sortedRoots = [
+    ...roots.filter(c => c.important),
+    ...roots.filter(c => !c.important),
+  ];
+
+  // 重要カード区切り線
+  const hasImportant = sortedRoots.some(c => c.important);
+  const hasNormal    = sortedRoots.some(c => !c.important);
+
   const rendered = new Set();
-  visible.forEach(card => {
+  sortedRoots.forEach((card, idx) => {
+    // 重要→通常の境界に区切り線を挿入
+    if (hasImportant && hasNormal && !card.important &&
+        idx > 0 && sortedRoots[idx - 1].important) {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'height:1px;background:rgba(255,45,135,.15);margin:6px 0 10px;';
+      cards.appendChild(sep);
+    }
     if (rendered.has(card.id)) return;
-    if (card.parentId && visible.find(c => c.id === card.parentId)) return; // 後で親と一緒に描画
     rendered.add(card.id);
     cards.appendChild(makeCardEl(card, colId));
 
@@ -1519,6 +1548,7 @@ function makeCardEl(card, colId) {
   const cat = card.category || 'pinkcity';
   if (cat === 'private') el.classList.add('card--private');
   if (card.parentId) el.classList.add('card--subtask');
+  if (card.important) el.classList.add('card--important');
 
   // 親カードのサブタスク数バッジ
   const subCount = ['todo','inprog','done'].reduce(
@@ -1700,6 +1730,23 @@ function openActionSheet(cardId, colId) {
       closeSheet(); // cardId/colId はクロージャで保持されてるのでOK
     });
     container.appendChild(catBtn);
+  }
+
+  // 💖 重要トグル
+  const found3 = state[colId].find(c => c.id === cardId);
+  if (found3) {
+    const impBtn = document.createElement('button');
+    impBtn.className = 'sheet-action sheet-action--move';
+    const isImp = !!found3.important;
+    impBtn.innerHTML = isImp
+      ? `<span>💔</span><span>重要を解除</span>`
+      : `<span>💖</span><span>重要タスクにする</span>`;
+    impBtn.addEventListener('click', () => {
+      const c = state[colId].find(x => x.id === cardId);
+      if (c) { c.important = !c.important; save(state); renderAll(); }
+      closeSheet();
+    });
+    container.appendChild(impBtn);
   }
 
   // Delete (2-tap confirm)
