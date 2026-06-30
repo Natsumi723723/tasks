@@ -1471,13 +1471,38 @@ function renderOnHoldStrip() {
   // バッジ更新
   document.getElementById('onhold-badge').textContent = visible.length;
 
-  // カードを onhold-inner に描画
+  // カードを onhold-inner に描画（親→サブタスクグループ、重要順）
   const inner = document.getElementById('onhold-inner');
   inner.innerHTML = '';
-  visible.forEach(card => {
-    const el = makeCardEl(card, 'inprog');
-    el.style.marginBottom = '8px';
-    inner.appendChild(el);
+
+  const isRoot = c => !c.parentId || !visible.find(p => p.id === c.parentId);
+  const roots = visible.filter(isRoot);
+  const sortedRoots = [
+    ...roots.filter(c => c.important),
+    ...roots.filter(c => !c.important),
+  ];
+  const hasImportant = sortedRoots.some(c => c.important);
+  const hasNormal    = sortedRoots.some(c => !c.important);
+
+  const rendered = new Set();
+  sortedRoots.forEach((card, idx) => {
+    if (hasImportant && hasNormal && !card.important &&
+        idx > 0 && sortedRoots[idx - 1].important) {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'height:1px;background:rgba(255,45,135,.15);margin:6px 0 10px;';
+      inner.appendChild(sep);
+    }
+    if (rendered.has(card.id)) return;
+    rendered.add(card.id);
+    inner.appendChild(makeCardEl(card, 'inprog'));
+
+    const subs = visible.filter(c => c.parentId === card.id);
+    if (subs.length > 0) {
+      const grp = document.createElement('div');
+      grp.className = 'subtask-group';
+      subs.forEach(sub => { rendered.add(sub.id); grp.appendChild(makeCardEl(sub, 'inprog')); });
+      inner.appendChild(grp);
+    }
   });
 }
 
