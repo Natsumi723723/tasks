@@ -955,8 +955,20 @@
     }
 
     /* inprog / done はボードから外してストリップで表示 */
-    .column--inprog { display:none !important; }
-    .column--done   { display:none !important; }
+    .column--inprog,
+    .column--done   { display:none !important; width:0 !important; overflow:hidden !important; }
+
+    /* DONE strip 内のカードに done スタイルを適用 */
+    .done-inner .card {
+      border-left-color:#c0007a;
+      background:linear-gradient(135deg,rgba(255,255,255,.88),rgba(255,200,230,.82)) !important;
+      flex-wrap:wrap;
+    }
+    .done-inner .card-text {
+      text-decoration:line-through;
+      text-decoration-color:rgba(233,30,140,.4);
+      opacity:.7;
+    }
     @media (max-width:680px) {
       .board { padding:0 12px; }
     }
@@ -1001,11 +1013,11 @@
     }
     .strip-badge--done { background:rgba(192,0,122,.2); color:#c0007a; }
     .strip-body {
-      overflow:hidden; max-height:0;
+      overflow:hidden; max-height:0; width:100%;
       transition:max-height .35s cubic-bezier(.4,0,.2,1);
     }
     .strip-body.open { max-height:2000px; }
-    .onhold-inner, .done-inner { padding-top:10px; }
+    .onhold-inner, .done-inner { padding-top:10px; width:100%; box-sizing:border-box; }
 
     /* ===== SYNC STATUS ===== */
     .sync-pill {
