@@ -171,7 +171,8 @@
     .col-cards::-webkit-scrollbar-track { background: transparent; }
     .col-cards::-webkit-scrollbar-thumb { background: rgba(255,45,135,.35); border-radius: 2px; }
     @media (min-width:681px) {
-      .column { max-height: calc(100vh - 210px); }
+      .column { max-height: none; height: auto; }
+      .col-cards { overflow-y: visible; flex: none; }
     }
     .column.drag-over {
       background:rgba(255,45,135,.15);
