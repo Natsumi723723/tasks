@@ -803,15 +803,18 @@
     .card--subtask:last-child { margin-bottom:0; }
     /* 重要タスク */
     .card--important {
-      border-color:rgba(255,45,135,.75) !important;
-      box-shadow:0 0 0 1.5px rgba(255,45,135,.25), 0 4px 20px rgba(255,45,135,.22) !important;
-      background:linear-gradient(135deg,rgba(255,255,255,.99),rgba(255,218,242,.93)) !important;
+      border-left:7px solid #FF2D87 !important;
+      box-shadow:
+        -1px 0 14px rgba(255,45,135,.55),
+        0 4px 20px rgba(255,45,135,.18) !important;
+      background:linear-gradient(135deg,rgba(255,255,255,.99),rgba(255,215,240,.94)) !important;
     }
-    .card--important::after {
-      content:'💖';
-      position:absolute; top:-7px; right:9px;
-      font-size:.82rem;
-      filter:drop-shadow(0 0 5px rgba(255,45,135,.65));
+    .card-important-mark {
+      flex-shrink:0;
+      font-size:.78rem;
+      line-height:1;
+      margin-right:1px;
+      filter:drop-shadow(0 0 3px rgba(255,45,135,.7));
     }
     /* 親カードのサブタスクバッジ */
     .card-subtask-badge {
@@ -1568,9 +1571,13 @@ function makeCardEl(card, colId) {
     ? `<button class="card-done-btn" aria-label="完了にする">♡</button>`
     : '';
 
+  const importantMark = card.important
+    ? `<span class="card-important-mark">💖</span>` : '';
+
   el.innerHTML = `
     ${nextLabel ? `<div class="swipe-hint swipe-hint--right" aria-hidden="true">${nextLabel} ▶</div>` : ''}
     ${prevLabel ? `<div class="swipe-hint swipe-hint--left"  aria-hidden="true">◀ ${prevLabel}</div>` : ''}
+    ${importantMark}
     <span class="card-prefix">${card.prefix}</span>
     <span class="card-text">${escHtml(card.text)}</span>
     ${subtaskBadge}
