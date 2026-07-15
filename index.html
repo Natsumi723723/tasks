@@ -244,15 +244,13 @@
       transition:color .2s, transform .2s;
       margin-right:-2px;
     }
-    /* long-press charging state */
+    /* long-press charging state — glow only, NO scale (prevents jank on drag start) */
     .card.long-pressing {
-      transform:scale(1.03) !important;
-      box-shadow:0 6px 28px rgba(255,45,135,.45) !important;
-      transition:transform .15s, box-shadow .15s !important;
+      box-shadow:0 0 0 2px rgba(255,45,135,.55), 0 6px 28px rgba(255,45,135,.4) !important;
+      transition:box-shadow .12s !important;
     }
     .card.long-pressing .card-drag-handle {
-      color:rgba(255,45,135,.7);
-      transform:scale(1.2);
+      color:rgba(255,45,135,.8);
     }
 
     /* ===== SWIPE HINTS ===== */
@@ -2500,6 +2498,8 @@ let tcState      = 'IDLE'; // IDLE | PENDING | SWIPING | DRAGGING
 let tcCard       = null;
 let tcStartX     = 0;
 let tcStartY     = 0;
+let tcCurX       = 0;    // always updated to latest touch position
+let tcCurY       = 0;
 let tcOffsetX    = 0;
 let tcOffsetY    = 0;
 let tcLongTimer  = null;
@@ -2548,34 +2548,44 @@ function handleTouchStart(e) {
   if (!card || e.target.closest('.add-btn') || e.target.closest('.card-done-btn')) return;
 
   tcCard   = card;
-  tcStartX = e.touches[0].clientX;
-  tcStartY = e.touches[0].clientY;
+  tcStartX = tcCurX = e.touches[0].clientX;
+  tcStartY = tcCurY = e.touches[0].clientY;
   tcState  = 'PENDING';
 
-  // Visual "charging" feedback after 100ms (card glows, handle brightens)
+  // Visual "charging" feedback after 120ms (glow, no scale)
   tcPressTimer = setTimeout(() => {
     if (tcState === 'PENDING') card.classList.add('long-pressing');
-  }, 100);
+  }, 120);
 
   // Long-press → drag mode
   tcLongTimer = setTimeout(() => {
     if (tcState !== 'PENDING') return;
     tcState = 'DRAGGING';
     card.classList.remove('long-pressing');
+
+    // Offset = where finger sits within the card (from original press point)
     const rect = card.getBoundingClientRect();
     tcOffsetX = tcStartX - rect.left;
     tcOffsetY = tcStartY - rect.top;
 
     ghost.innerHTML = card.innerHTML;
     ghost.querySelectorAll('.swipe-hint').forEach(h => h.remove());
+
+    // Position ghost immediately under the CURRENT finger (not original touch point)
+    const ghostLeft = tcCurX - tcOffsetX;
+    const ghostTop  = tcCurY - tcOffsetY;
     ghost.style.cssText = `display:flex;align-items:center;gap:8px;
-      width:${rect.width}px;left:${rect.left}px;top:${rect.top}px;
+      width:${rect.width}px;left:${ghostLeft}px;top:${ghostTop}px;
       position:fixed;z-index:9999;pointer-events:none;opacity:.9;
-      transform:rotate(2deg) scale(1.06);
+      transform:rotate(1.5deg) scale(1.04);
       filter:drop-shadow(0 10px 28px rgba(255,45,135,.6));
       background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,220,240,.94));
       border-left:4px solid #FF2D87;border-radius:12px;padding:12px 14px 12px 13px;
-      color:#3d0025;font-size:.875rem;font-weight:700;transition:none;`;
+      color:#3d0025;font-size:.875rem;font-weight:700;
+      will-change:left,top;`;
+
+    // Hide original card instantly (no transition)
+    card.style.transition = 'none';
     card.classList.add('dragging');
     if (navigator.vibrate) navigator.vibrate([6, 20, 10]);
   }, LONG_PRESS_MS);
@@ -2584,8 +2594,12 @@ function handleTouchStart(e) {
 function handleTouchMove(e) {
   if (tcState === 'IDLE' || !tcCard) return;
 
-  const dx = e.touches[0].clientX - tcStartX;
-  const dy = e.touches[0].clientY - tcStartY;
+  // Always track the latest touch position so the long-press timer can use it
+  tcCurX = e.touches[0].clientX;
+  tcCurY = e.touches[0].clientY;
+
+  const dx = tcCurX - tcStartX;
+  const dy = tcCurY - tcStartY;
 
   if (tcState === 'PENDING') {
     const adx = Math.abs(dx), ady = Math.abs(dy);
@@ -2631,12 +2645,12 @@ function handleTouchMove(e) {
 
   if (tcState === 'DRAGGING') {
     e.preventDefault();
-    const touch = e.touches[0];
-    ghost.style.left = (touch.clientX - tcOffsetX) + 'px';
-    ghost.style.top  = (touch.clientY - tcOffsetY) + 'px';
+    // tcCurX/Y already updated at the top of this function
+    ghost.style.left = (tcCurX - tcOffsetX) + 'px';
+    ghost.style.top  = (tcCurY - tcOffsetY) + 'px';
 
     ghost.style.display = 'none';
-    const under = document.elementFromPoint(touch.clientX, touch.clientY);
+    const under = document.elementFromPoint(tcCurX, tcCurY);
     ghost.style.display = 'flex';
 
     document.querySelectorAll('.column, .onhold-inner, .done-inner')
@@ -2649,13 +2663,13 @@ function handleTouchMove(e) {
       highlightEl.classList.add('drag-over');
       const col = container.closest('.column');
       if (col) {
-        showPlaceholder(col, getCardIdBeforeInEl(touch.clientY, container));
+        showPlaceholder(col, getCardIdBeforeInEl(tcCurY, container));
       } else {
         // secondary strip: insert placeholder directly in strip inner
         removePlaceholder();
         placeholder = document.createElement('div');
         placeholder.className = 'drop-placeholder';
-        const beforeId = getCardIdBeforeInEl(touch.clientY, container);
+        const beforeId = getCardIdBeforeInEl(tcCurY, container);
         const tgt = beforeId && container.querySelector(`[data-id="${beforeId}"]`);
         container.insertBefore(placeholder, tgt || null);
       }
