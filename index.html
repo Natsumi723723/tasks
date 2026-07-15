@@ -2519,7 +2519,8 @@ function tcReset() {
   removePlaceholder();
   document.querySelectorAll('.column, .onhold-inner, .done-inner')
     .forEach(c => c.classList.remove('drag-over'));
-  ghost.style.display = 'none';
+  ghost.style.display    = 'none';
+  ghost.style.visibility = '';
 }
 
 // Find drop target container and its colId from an element under the finger
@@ -2542,6 +2543,35 @@ function getCardIdBeforeInEl(y, container) {
   return null;
 }
 
+// Track the last confirmed drop position (set during touchmove, used in touchend)
+let tcDropTarget   = null;  // { container, colId } | null
+let tcDropBeforeId = null;  // id to insert before, or null = append
+
+function activateDrag(card) {
+  const rect = card.getBoundingClientRect();
+  tcOffsetX = tcStartX - rect.left;
+  tcOffsetY = tcStartY - rect.top;
+
+  ghost.innerHTML = card.innerHTML;
+  ghost.querySelectorAll('.swipe-hint').forEach(h => h.remove());
+  ghost.style.cssText = `display:flex;align-items:center;gap:8px;
+    width:${rect.width}px;
+    left:${tcCurX - tcOffsetX}px;top:${tcCurY - tcOffsetY}px;
+    position:fixed;z-index:9999;pointer-events:none;opacity:.92;
+    transform:rotate(1.5deg) scale(1.03);
+    filter:drop-shadow(0 8px 24px rgba(255,45,135,.55));
+    background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,220,240,.94));
+    border-left:4px solid #FF2D87;border-radius:12px;padding:12px 14px 12px 13px;
+    color:#3d0025;font-size:.875rem;font-weight:700;`;
+
+  card.style.transition = 'none';
+  card.classList.remove('long-pressing');
+  card.classList.add('dragging');
+  tcDropTarget   = null;
+  tcDropBeforeId = null;
+  if (navigator.vibrate) navigator.vibrate([6, 18, 8]);
+}
+
 function handleTouchStart(e) {
   if (tcState !== 'IDLE') return;
   const card = e.target.closest('.card');
@@ -2550,83 +2580,75 @@ function handleTouchStart(e) {
   tcCard   = card;
   tcStartX = tcCurX = e.touches[0].clientX;
   tcStartY = tcCurY = e.touches[0].clientY;
-  tcState  = 'PENDING';
 
-  // Visual "charging" feedback after 120ms (glow, no scale)
+  // ⠿ drag handle → ready to drag on first movement (no long-press wait)
+  if (e.target.closest('.card-drag-handle')) {
+    tcState = 'DRAG_INIT';
+    card.classList.add('long-pressing');
+    return;
+  }
+
+  tcState = 'PENDING';
+
+  // Visual "charging" feedback at 120ms
   tcPressTimer = setTimeout(() => {
     if (tcState === 'PENDING') card.classList.add('long-pressing');
   }, 120);
 
-  // Long-press → drag mode
+  // Long-press fallback (non-handle touch)
   tcLongTimer = setTimeout(() => {
     if (tcState !== 'PENDING') return;
     tcState = 'DRAGGING';
-    card.classList.remove('long-pressing');
-
-    // Offset = where finger sits within the card (from original press point)
-    const rect = card.getBoundingClientRect();
-    tcOffsetX = tcStartX - rect.left;
-    tcOffsetY = tcStartY - rect.top;
-
-    ghost.innerHTML = card.innerHTML;
-    ghost.querySelectorAll('.swipe-hint').forEach(h => h.remove());
-
-    // Position ghost immediately under the CURRENT finger (not original touch point)
-    const ghostLeft = tcCurX - tcOffsetX;
-    const ghostTop  = tcCurY - tcOffsetY;
-    ghost.style.cssText = `display:flex;align-items:center;gap:8px;
-      width:${rect.width}px;left:${ghostLeft}px;top:${ghostTop}px;
-      position:fixed;z-index:9999;pointer-events:none;opacity:.9;
-      transform:rotate(1.5deg) scale(1.04);
-      filter:drop-shadow(0 10px 28px rgba(255,45,135,.6));
-      background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,220,240,.94));
-      border-left:4px solid #FF2D87;border-radius:12px;padding:12px 14px 12px 13px;
-      color:#3d0025;font-size:.875rem;font-weight:700;
-      will-change:left,top;`;
-
-    // Hide original card instantly (no transition)
-    card.style.transition = 'none';
-    card.classList.add('dragging');
-    if (navigator.vibrate) navigator.vibrate([6, 20, 10]);
+    activateDrag(card);
   }, LONG_PRESS_MS);
 }
 
 function handleTouchMove(e) {
   if (tcState === 'IDLE' || !tcCard) return;
 
-  // Always track the latest touch position so the long-press timer can use it
+  // Always track the latest touch coordinates
   tcCurX = e.touches[0].clientX;
   tcCurY = e.touches[0].clientY;
 
   const dx = tcCurX - tcStartX;
   const dy = tcCurY - tcStartY;
 
+  // ── DRAG_INIT: handle was touched, first real movement starts the drag ──
+  if (tcState === 'DRAG_INIT') {
+    e.preventDefault();  // block scroll immediately from handle touch
+    if (Math.abs(dy) > 4 || Math.abs(dx) > 4) {
+      tcState = 'DRAGGING';
+      activateDrag(tcCard);
+    }
+    return;
+  }
+
+  // ── PENDING: waiting to classify the gesture ──
   if (tcState === 'PENDING') {
     const adx = Math.abs(dx), ady = Math.abs(dy);
     if (adx < SWIPE_START_MIN && ady < SWIPE_START_MIN) return;
 
     if (adx > ady * 1.5) {
-      // Clearly horizontal → cancel long press, enter swipe mode
+      // Clearly horizontal → swipe mode
       clearTimeout(tcLongTimer);  tcLongTimer  = null;
       clearTimeout(tcPressTimer); tcPressTimer = null;
       tcCard.classList.remove('long-pressing');
       tcState = 'SWIPING';
     } else if (ady > 32 && ady > adx * 2) {
-      // Large fast vertical scroll → cancel drag, let page scroll
+      // Fast large vertical → page scroll, cancel drag
       clearTimeout(tcLongTimer);  tcLongTimer  = null;
       clearTimeout(tcPressTimer); tcPressTimer = null;
       tcReset(); return;
     }
-    // Small/ambiguous movement: keep waiting for long-press timer
+    // Ambiguous small movement → keep waiting for long-press
     return;
   }
 
+  // ── SWIPING ──
   if (tcState === 'SWIPING') {
     e.preventDefault();
-    const rotation = dx / 22;
     tcCard.style.transition = 'none';
-    tcCard.style.transform  = `translateX(${dx}px) rotate(${rotation}deg)`;
-
+    tcCard.style.transform  = `translateX(${dx}px) rotate(${dx / 22}deg)`;
     const progress = Math.min(1, Math.abs(dx) / SWIPE_THRESHOLD);
     const colMeta  = COL_META[tcCard.dataset.col];
     if (dx > 0 && colMeta.next) {
@@ -2643,38 +2665,41 @@ function handleTouchMove(e) {
     return;
   }
 
+  // ── DRAGGING ──
   if (tcState === 'DRAGGING') {
     e.preventDefault();
-    // tcCurX/Y already updated at the top of this function
     ghost.style.left = (tcCurX - tcOffsetX) + 'px';
     ghost.style.top  = (tcCurY - tcOffsetY) + 'px';
 
-    ghost.style.display = 'none';
+    // Hit-test: hide ghost so elementFromPoint sees what's underneath
+    ghost.style.visibility = 'hidden';
     const under = document.elementFromPoint(tcCurX, tcCurY);
-    ghost.style.display = 'flex';
+    ghost.style.visibility = '';
 
     document.querySelectorAll('.column, .onhold-inner, .done-inner')
       .forEach(c => c.classList.remove('drag-over'));
 
     const target = getDragTarget(under);
     if (target) {
-      const { container, colId } = target;
+      const { container } = target;
       const highlightEl = container.closest('.column') || container;
       highlightEl.classList.add('drag-over');
-      const col = container.closest('.column');
-      if (col) {
-        showPlaceholder(col, getCardIdBeforeInEl(tcCurY, container));
-      } else {
-        // secondary strip: insert placeholder directly in strip inner
-        removePlaceholder();
-        placeholder = document.createElement('div');
-        placeholder.className = 'drop-placeholder';
-        const beforeId = getCardIdBeforeInEl(tcCurY, container);
-        const tgt = beforeId && container.querySelector(`[data-id="${beforeId}"]`);
-        container.insertBefore(placeholder, tgt || null);
-      }
+
+      // Calculate and remember the insertion point
+      const beforeId = getCardIdBeforeInEl(tcCurY, container);
+      tcDropTarget   = target;
+      tcDropBeforeId = beforeId;
+
+      // Show placeholder at the exact insertion spot
+      removePlaceholder();
+      placeholder = document.createElement('div');
+      placeholder.className = 'drop-placeholder';
+      const tgt = beforeId && container.querySelector(`[data-id="${beforeId}"]`);
+      container.insertBefore(placeholder, tgt || null);
     } else {
       removePlaceholder();
+      tcDropTarget   = null;
+      tcDropBeforeId = null;
     }
   }
 }
@@ -2684,10 +2709,12 @@ function handleTouchEnd(e) {
   clearTimeout(tcLongTimer);  tcLongTimer  = null;
   clearTimeout(tcPressTimer); tcPressTimer = null;
 
-  if (tcState === 'PENDING') {
-    const card      = tcCard;
+  if (tcState === 'PENDING' || tcState === 'DRAG_INIT') {
+    const card       = tcCard;
     const wasDoneBtn = e.target.closest('.card-done-btn');
+    const wasHandle  = tcState === 'DRAG_INIT';
     tcReset();
+    // Tap on handle without dragging → open action sheet (same as card tap)
     if (card && !card.classList.contains('dragging') && !wasDoneBtn) {
       openActionSheet(card.dataset.id, card.dataset.col);
     }
@@ -2706,7 +2733,7 @@ function handleTouchEnd(e) {
     if (adx >= SWIPE_THRESHOLD && toCol) {
       const flyX = dx > 0 ? window.innerWidth : -window.innerWidth;
       card.style.transition = 'transform .28s cubic-bezier(.4,0,1,1), opacity .28s';
-      card.style.transform  = `translateX(${flyX}px) rotate(${flyX/60}deg)`;
+      card.style.transform  = `translateX(${flyX}px) rotate(${flyX / 60}deg)`;
       card.style.opacity    = '0';
       setTimeout(() => { moveCardTo(cardId, colId, toCol); }, 260);
       if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
@@ -2720,20 +2747,20 @@ function handleTouchEnd(e) {
   }
 
   if (tcState === 'DRAGGING') {
-    const touch = e.changedTouches[0];
-    ghost.style.display = 'none';
-    const under = document.elementFromPoint(touch.clientX, touch.clientY);
+    // Use the tracked drop target (set during last touchmove) — never re-calculates from changedTouches
+    const savedId  = tcCard.dataset.id;
+    const savedCol = tcCard.dataset.col;
+    const dropTarget   = tcDropTarget;
+    const dropBeforeId = tcDropBeforeId;
+
+    removePlaceholder();
     document.querySelectorAll('.column, .onhold-inner, .done-inner')
       .forEach(c => c.classList.remove('drag-over'));
-    removePlaceholder();
-
-    const target = getDragTarget(under);
-    if (target) {
-      const { container, colId } = target;
-      moveCard(tcCard.dataset.id, tcCard.dataset.col, colId,
-               getCardIdBeforeInEl(touch.clientY, container));
-    }
     tcReset();
+
+    if (dropTarget) {
+      moveCard(savedId, savedCol, dropTarget.colId, dropBeforeId);
+    }
     renderAll();
     if (navigator.vibrate) navigator.vibrate(12);
   }
