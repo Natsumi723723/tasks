@@ -236,10 +236,23 @@
     .card.dragging { opacity:.4; transform:scale(.97); cursor:grabbing; box-shadow:none; }
     .card-prefix { flex-shrink:0; font-size:1.05rem; }
     .card-text   { flex:1; }
-    /* subtle tap indicator */
-    .card-menu {
-      flex-shrink:0; font-size:.85rem; color:rgba(180,0,90,.35);
-      line-height:1; letter-spacing:-.05em;
+    /* drag handle */
+    .card-drag-handle {
+      flex-shrink:0; font-size:1rem; line-height:1;
+      color:rgba(255,105,180,.22);
+      user-select:none; cursor:grab;
+      transition:color .2s, transform .2s;
+      margin-right:-2px;
+    }
+    /* long-press charging state */
+    .card.long-pressing {
+      transform:scale(1.03) !important;
+      box-shadow:0 6px 28px rgba(255,45,135,.45) !important;
+      transition:transform .15s, box-shadow .15s !important;
+    }
+    .card.long-pressing .card-drag-handle {
+      color:rgba(255,45,135,.7);
+      transform:scale(1.2);
     }
 
     /* ===== SWIPE HINTS ===== */
@@ -1754,6 +1767,7 @@ function makeCardEl(card, colId) {
   el.innerHTML = `
     ${nextLabel ? `<div class="swipe-hint swipe-hint--right" aria-hidden="true">${nextLabel} ▶</div>` : ''}
     ${prevLabel ? `<div class="swipe-hint swipe-hint--left"  aria-hidden="true">◀ ${prevLabel}</div>` : ''}
+    <span class="card-drag-handle" aria-hidden="true">⠿</span>
     ${importantMark}
     ${subArrow}
     <span class="card-prefix">${card.prefix}</span>
@@ -2479,46 +2493,75 @@ function removePlaceholder() { if (placeholder) { placeholder.remove(); placehol
    - long press  → drag & drop
 ============================================================ */
 const SWIPE_THRESHOLD  = 75;   // px to trigger column move
-const SWIPE_START_MIN  = 10;   // px before we lock to swipe mode
-const LONG_PRESS_MS    = 320;
+const SWIPE_START_MIN  = 10;   // px before we determine gesture type
+const LONG_PRESS_MS    = 240;  // ms for long-press drag activation
 
-let tcState    = 'IDLE'; // IDLE | PENDING | SWIPING | DRAGGING
-let tcCard     = null;
-let tcStartX   = 0;
-let tcStartY   = 0;
-let tcOffsetX  = 0;
-let tcOffsetY  = 0;
-let tcLongTimer = null;
+let tcState      = 'IDLE'; // IDLE | PENDING | SWIPING | DRAGGING
+let tcCard       = null;
+let tcStartX     = 0;
+let tcStartY     = 0;
+let tcOffsetX    = 0;
+let tcOffsetY    = 0;
+let tcLongTimer  = null;
+let tcPressTimer = null;  // visual "charging" feedback timer
 
 function tcReset() {
   tcState = 'IDLE';
   if (tcCard) {
-    tcCard.style.transform = '';
+    tcCard.style.transform  = '';
     tcCard.style.transition = '';
     tcCard.querySelectorAll('.swipe-hint').forEach(h => { h.style.opacity = ''; });
-    tcCard.classList.remove('dragging');
+    tcCard.classList.remove('dragging', 'long-pressing');
     tcCard = null;
   }
-  clearTimeout(tcLongTimer); tcLongTimer = null;
+  clearTimeout(tcLongTimer);  tcLongTimer  = null;
+  clearTimeout(tcPressTimer); tcPressTimer = null;
   removePlaceholder();
-  document.querySelectorAll('.column').forEach(c => c.classList.remove('drag-over'));
+  document.querySelectorAll('.column, .onhold-inner, .done-inner')
+    .forEach(c => c.classList.remove('drag-over'));
   ghost.style.display = 'none';
 }
 
-document.querySelector('.board').addEventListener('touchstart', e => {
+// Find drop target container and its colId from an element under the finger
+function getDragTarget(el) {
+  const col = el && el.closest('.column:not([aria-hidden="true"])');
+  if (col && col.id) return { container: getCardsContainer(col), colId: col.id.replace('col-', '') };
+  const onholdInner = el && el.closest('.onhold-inner');
+  if (onholdInner) return { container: onholdInner, colId: 'inprog' };
+  const doneInner = el && el.closest('.done-inner');
+  if (doneInner) return { container: doneInner, colId: 'done' };
+  return null;
+}
+
+// Returns the id of the card that the dragged card should be inserted before
+function getCardIdBeforeInEl(y, container) {
+  for (const card of [...container.querySelectorAll('.card:not(.dragging)')]) {
+    const r = card.getBoundingClientRect();
+    if (y < r.top + r.height / 2) return card.dataset.id;
+  }
+  return null;
+}
+
+function handleTouchStart(e) {
   if (tcState !== 'IDLE') return;
   const card = e.target.closest('.card');
-  if (!card || e.target.closest('.add-btn')) return;
+  if (!card || e.target.closest('.add-btn') || e.target.closest('.card-done-btn')) return;
 
   tcCard   = card;
   tcStartX = e.touches[0].clientX;
   tcStartY = e.touches[0].clientY;
   tcState  = 'PENDING';
 
-  // long-press → drag
+  // Visual "charging" feedback after 100ms (card glows, handle brightens)
+  tcPressTimer = setTimeout(() => {
+    if (tcState === 'PENDING') card.classList.add('long-pressing');
+  }, 100);
+
+  // Long-press → drag mode
   tcLongTimer = setTimeout(() => {
     if (tcState !== 'PENDING') return;
     tcState = 'DRAGGING';
+    card.classList.remove('long-pressing');
     const rect = card.getBoundingClientRect();
     tcOffsetX = tcStartX - rect.left;
     tcOffsetY = tcStartY - rect.top;
@@ -2527,18 +2570,18 @@ document.querySelector('.board').addEventListener('touchstart', e => {
     ghost.querySelectorAll('.swipe-hint').forEach(h => h.remove());
     ghost.style.cssText = `display:flex;align-items:center;gap:8px;
       width:${rect.width}px;left:${rect.left}px;top:${rect.top}px;
-      position:fixed;z-index:9999;pointer-events:none;opacity:.88;
-      transform:rotate(2deg) scale(1.04);
-      filter:drop-shadow(0 8px 24px rgba(255,45,135,.55));
-      background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,220,240,.92));
+      position:fixed;z-index:9999;pointer-events:none;opacity:.9;
+      transform:rotate(2deg) scale(1.06);
+      filter:drop-shadow(0 10px 28px rgba(255,45,135,.6));
+      background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,220,240,.94));
       border-left:4px solid #FF2D87;border-radius:12px;padding:12px 14px 12px 13px;
-      color:#3d0025;font-size:.875rem;font-weight:700;`;
+      color:#3d0025;font-size:.875rem;font-weight:700;transition:none;`;
     card.classList.add('dragging');
-    if (navigator.vibrate) navigator.vibrate(18);
+    if (navigator.vibrate) navigator.vibrate([6, 20, 10]);
   }, LONG_PRESS_MS);
-}, { passive: true });
+}
 
-document.querySelector('.board').addEventListener('touchmove', e => {
+function handleTouchMove(e) {
   if (tcState === 'IDLE' || !tcCard) return;
 
   const dx = e.touches[0].clientX - tcStartX;
@@ -2548,15 +2591,20 @@ document.querySelector('.board').addEventListener('touchmove', e => {
     const adx = Math.abs(dx), ady = Math.abs(dy);
     if (adx < SWIPE_START_MIN && ady < SWIPE_START_MIN) return;
 
-    clearTimeout(tcLongTimer); tcLongTimer = null;
-
-    if (adx > ady * 1.2) {
-      // horizontal → swipe mode
+    if (adx > ady * 1.5) {
+      // Clearly horizontal → cancel long press, enter swipe mode
+      clearTimeout(tcLongTimer);  tcLongTimer  = null;
+      clearTimeout(tcPressTimer); tcPressTimer = null;
+      tcCard.classList.remove('long-pressing');
       tcState = 'SWIPING';
-    } else {
-      // vertical → let scroll happen
+    } else if (ady > 32 && ady > adx * 2) {
+      // Large fast vertical scroll → cancel drag, let page scroll
+      clearTimeout(tcLongTimer);  tcLongTimer  = null;
+      clearTimeout(tcPressTimer); tcPressTimer = null;
       tcReset(); return;
     }
+    // Small/ambiguous movement: keep waiting for long-press timer
+    return;
   }
 
   if (tcState === 'SWIPING') {
@@ -2565,7 +2613,6 @@ document.querySelector('.board').addEventListener('touchmove', e => {
     tcCard.style.transition = 'none';
     tcCard.style.transform  = `translateX(${dx}px) rotate(${rotation}deg)`;
 
-    // show swipe hint
     const progress = Math.min(1, Math.abs(dx) / SWIPE_THRESHOLD);
     const colMeta  = COL_META[tcCard.dataset.col];
     if (dx > 0 && colMeta.next) {
@@ -2579,9 +2626,6 @@ document.querySelector('.board').addEventListener('touchmove', e => {
       const hr = tcCard.querySelector('.swipe-hint--right');
       if (hr) hr.style.opacity = 0;
     }
-
-    // haptic at threshold
-    if (Math.abs(dx) === SWIPE_THRESHOLD && navigator.vibrate) navigator.vibrate(10);
     return;
   }
 
@@ -2594,20 +2638,40 @@ document.querySelector('.board').addEventListener('touchmove', e => {
     ghost.style.display = 'none';
     const under = document.elementFromPoint(touch.clientX, touch.clientY);
     ghost.style.display = 'flex';
-    document.querySelectorAll('.column').forEach(c => c.classList.remove('drag-over'));
-    const hCol = under && under.closest('.column');
-    if (hCol) { hCol.classList.add('drag-over'); showPlaceholder(hCol, getCardIdBefore(touch.clientY, hCol)); }
-    else removePlaceholder();
-  }
-}, { passive: false });
 
-document.querySelector('.board').addEventListener('touchend', e => {
+    document.querySelectorAll('.column, .onhold-inner, .done-inner')
+      .forEach(c => c.classList.remove('drag-over'));
+
+    const target = getDragTarget(under);
+    if (target) {
+      const { container, colId } = target;
+      const highlightEl = container.closest('.column') || container;
+      highlightEl.classList.add('drag-over');
+      const col = container.closest('.column');
+      if (col) {
+        showPlaceholder(col, getCardIdBeforeInEl(touch.clientY, container));
+      } else {
+        // secondary strip: insert placeholder directly in strip inner
+        removePlaceholder();
+        placeholder = document.createElement('div');
+        placeholder.className = 'drop-placeholder';
+        const beforeId = getCardIdBeforeInEl(touch.clientY, container);
+        const tgt = beforeId && container.querySelector(`[data-id="${beforeId}"]`);
+        container.insertBefore(placeholder, tgt || null);
+      }
+    } else {
+      removePlaceholder();
+    }
+  }
+}
+
+function handleTouchEnd(e) {
   if (tcState === 'IDLE') return;
-  clearTimeout(tcLongTimer); tcLongTimer = null;
+  clearTimeout(tcLongTimer);  tcLongTimer  = null;
+  clearTimeout(tcPressTimer); tcPressTimer = null;
 
   if (tcState === 'PENDING') {
-    // short tap → action sheet（✅ボタンはclick側で処理済みのためスキップ）
-    const card = tcCard;
+    const card      = tcCard;
     const wasDoneBtn = e.target.closest('.card-done-btn');
     tcReset();
     if (card && !card.classList.contains('dragging') && !wasDoneBtn) {
@@ -2626,7 +2690,6 @@ document.querySelector('.board').addEventListener('touchend', e => {
     const card    = tcCard;
 
     if (adx >= SWIPE_THRESHOLD && toCol) {
-      // fly off
       const flyX = dx > 0 ? window.innerWidth : -window.innerWidth;
       card.style.transition = 'transform .28s cubic-bezier(.4,0,1,1), opacity .28s';
       card.style.transform  = `translateX(${flyX}px) rotate(${flyX/60}deg)`;
@@ -2634,7 +2697,6 @@ document.querySelector('.board').addEventListener('touchend', e => {
       setTimeout(() => { moveCardTo(cardId, colId, toCol); }, 260);
       if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
     } else {
-      // snap back
       card.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
       card.style.transform  = 'translateX(0) rotate(0deg)';
       card.querySelectorAll('.swipe-hint').forEach(h => { h.style.opacity = ''; });
@@ -2647,15 +2709,28 @@ document.querySelector('.board').addEventListener('touchend', e => {
     const touch = e.changedTouches[0];
     ghost.style.display = 'none';
     const under = document.elementFromPoint(touch.clientX, touch.clientY);
-    document.querySelectorAll('.column').forEach(c => c.classList.remove('drag-over'));
+    document.querySelectorAll('.column, .onhold-inner, .done-inner')
+      .forEach(c => c.classList.remove('drag-over'));
     removePlaceholder();
-    const hCol = under && under.closest('.column');
-    if (hCol) moveCard(tcCard.dataset.id, tcCard.dataset.col, hCol.id.replace('col-',''), getCardIdBefore(touch.clientY, hCol));
+
+    const target = getDragTarget(under);
+    if (target) {
+      const { container, colId } = target;
+      moveCard(tcCard.dataset.id, tcCard.dataset.col, colId,
+               getCardIdBeforeInEl(touch.clientY, container));
+    }
     tcReset();
     renderAll();
     if (navigator.vibrate) navigator.vibrate(12);
   }
-}, { passive: true });
+}
+
+// Attach to board AND secondary strips (ON HOLD / DONE)
+[document.querySelector('.board'), document.getElementById('secondary-strips')].forEach(el => {
+  el.addEventListener('touchstart', handleTouchStart, { passive: true });
+  el.addEventListener('touchmove',  handleTouchMove,  { passive: false });
+  el.addEventListener('touchend',   handleTouchEnd,   { passive: true });
+});
 
 /* ============================================================
    HABITS
